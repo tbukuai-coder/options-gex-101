@@ -1078,17 +1078,21 @@ sliders and watch the curves respond.</p>
   reveal and watch what really happened to the stock and to your P/L.</p>
 
   <div class="card">
-    <p class="chart-title">🎬 Earnings-season playbook — five sample cases</p>
+    <p class="chart-title">🎬 Earnings-season playbook — nine sample cases</p>
     <p class="chart-sub">The classic ways traders play a report. Each button deals a real past
     earnings date for the chosen stock and pre-builds the trade — read the note, study the setup
     below, then hit ▶ Reveal. Deal a few of each: the lesson is in the distribution, not one
     reveal.</p>
     <div class="controls" id="tmCases">
       <button class="plain" data-case="vol-buyer">📣 The vol buyer</button>
+      <button class="plain" data-case="cheap-vol">🃏 The budget vol buyer</button>
       <button class="plain" data-case="vol-seller">🤫 The vol seller</button>
+      <button class="plain" data-case="pin-seller">🎯 The pin seller</button>
       <button class="plain" data-case="bull">🚀 The directional bull</button>
+      <button class="plain" data-case="bear">🐻 The directional bear</button>
       <button class="plain" data-case="holder">🛡 The nervous holder</button>
       <button class="plain" data-case="income">💰 The income collector</button>
+      <button class="plain" data-case="dip-buyer">🤝 The dip buyer</button>
     </div>
     <p class="tryit" id="tmCaseNote" hidden></p>
   </div>
@@ -2947,7 +2951,36 @@ const TM_CASES = {
       " when call premium is richest, and most reports do not produce a moonshot. <b>What to" +
       " watch:</b> on a monster beat your upside stops at the short strike (in real life the shares" +
       " get “called away”). The richer the premium you collected, the more the market" +
-      " feared exactly that outcome." }
+      " feared exactly that outcome." },
+  "cheap-vol": { strat: "strangle", expOff: 10, w: 5,
+    note: "<b>🃏 The budget vol buyer — long strangle.</b> Same thesis as the straddle — the report" +
+      " moves the stock more than the market priced — but both legs sit ~5% out of the money, so it" +
+      " costs a fraction as much. The trade-off: there is now a wide dead zone between the strikes" +
+      " where <i>both</i> legs expire worthless. <b>What to watch:</b> deal the same kind of" +
+      " scenario as 📣 and compare — the strangle is cheaper to be wrong with, and harder to be" +
+      " right with. Small move: both lose. Medium move: the straddle wins. Monster move: the" +
+      " strangle's percentage return runs away." },
+  "pin-seller": { strat: "iron-butterfly", expOff: 10, w: 5,
+    note: "<b>🎯 The pin seller — iron butterfly on the report.</b> The boldest defined-risk way to" +
+      " sell earnings volatility: sell the at-the-money straddle, buy ~5% wings for safety. It" +
+      " collects a fatter credit than the condor, but full profit lands only if the stock finishes" +
+      " right where it started — a bet on an in-line, shrug-of-a-quarter. <b>What to watch:</b>" +
+      " compare with 🤫 across several reveals: the condor forgives small moves, the iron butterfly" +
+      " pays more but forgives almost nothing." },
+  "bear": { strat: "bear-put", expOff: 21, w: 5,
+    note: "<b>🐻 The directional bear — put spread on a miss.</b> The thesis: the quarter" +
+      " disappoints. Outright puts are doubly expensive into a report — the earnings markup on top" +
+      " of the permanent downside skew (§10 in the Guide) — so sell a lower-strike put against" +
+      " yours to cut the cost. <b>What to watch:</b> capped reward, known risk; on a real miss the" +
+      " spread multiplies fast, and on an in-line print you lose far less than a naked put buyer" +
+      " fighting the IV crush." },
+  "dip-buyer": { strat: "single", type: "put", side: "sell", money: -5, expOff: 21, w: 5,
+    note: "<b>🤝 The dip buyer — cash-secured put.</b> Sell a put ~5% below the market and pocket" +
+      " the inflated pre-earnings premium. Two outcomes you're happy with: the stock holds → the" +
+      " premium is pure income; it dips through the strike → you effectively buy shares at" +
+      " strike − premium, a discount to today. <b>What to watch:</b> the trap is the third" +
+      " outcome — a true collapse still hands you stock far above the new price. Selling puts is" +
+      " selling insurance: fine income until the house actually burns." }
 };
 function tmSetSeg(id, val) {
   document.querySelectorAll("#" + id + " button").forEach(b =>
@@ -2963,7 +2996,9 @@ function tmLoadCase(key) {
   tm.mode = "earnings"; tmSetSeg("tmMode", "earnings");
   tm.strat = c.strat;
   document.getElementById("tmStrat").value = c.strat;
-  tm.money = 0; tm.w = c.w; tm.expOff = c.expOff; tm.n = 1;
+  if (c.type) { tm.type = c.type; tmSetSeg("tmType", c.type); }
+  if (c.side) { tm.side = c.side; tmSetSeg("tmSide", c.side); }
+  tm.money = c.money || 0; tm.w = c.w; tm.expOff = c.expOff; tm.n = 1;
   document.getElementById("tmN").value = 1;
   tmSyncControls();
   tmPick();

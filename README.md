@@ -29,11 +29,13 @@ and the 0DTE era. Four tabs:
   % wing-width picker) — pick an expiry (2 weeks–3 months), then reveal: the true price
   path animates forward and your P/L is scored (with a same-money-in-shares comparison).
   After the reveal you can flip the position to see what a different trade would have
-  done on the same day. An **earnings-season playbook** offers five one-click sample
-  cases — vol buyer (straddle), vol seller (iron condor), directional bull (call
-  spread), nervous holder (protective put), income collector (covered call) — each
-  dealing a real past earnings date pre-configured with the trade and a what-to-watch
-  note (IV crush, tail risk of selling vol, capped-vs-pricey directional bets).
+  done on the same day. An **earnings-season playbook** offers nine one-click sample
+  cases — vol buyer (straddle), budget vol buyer (strangle), vol seller (iron condor),
+  pin seller (iron butterfly), directional bull/bear (call & put spreads), nervous
+  holder (protective put), income collector (covered call), dip buyer (cash-secured
+  short put) — each dealing a real past earnings date pre-configured with the trade
+  and a what-to-watch note (IV crush, tail risk of selling vol, capped-vs-pricey
+  directional bets).
 
 ## Run it
 
