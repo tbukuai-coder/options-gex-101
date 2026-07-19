@@ -22,10 +22,13 @@ and the 0DTE era. Four tabs:
   customers as the naive GEX model's assumed flow).
 - **⏳ Time machine** — a game on real history: jump to a random past trading day or a
   real past **earnings report date** (e.g. one of NVDA's actual reports), see only the
-  price chart up to that day, pick call/put × buy/sell × strike (±10%) × expiry
-  (2 weeks–3 months), then reveal — the true price path animates forward and your P/L
-  is scored (with a same-money-in-shares comparison). After the reveal you can flip
-  the position to see what a different trade would have done on the same day.
+  price chart up to that day, build a trade — a single option (call/put × buy/sell ×
+  strike ±10%) or any of the nine multi-leg strategies from the Strategies tab
+  (butterfly, iron condor, straddle, …; legs priced on a synthetic strike ladder with a
+  % wing-width picker) — pick an expiry (2 weeks–3 months), then reveal: the true price
+  path animates forward and your P/L is scored (with a same-money-in-shares comparison).
+  After the reveal you can flip the position to see what a different trade would have
+  done on the same day.
 
 ## Run it
 

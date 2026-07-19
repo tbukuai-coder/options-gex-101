@@ -142,6 +142,7 @@ code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monosp
   margin: 4px 0 14px;
 }
 .ctl { display: flex; flex-direction: column; gap: 4px; min-width: 130px; }
+.ctl[hidden] { display: none; }
 .ctl label { font-size: 12.5px; color: var(--ink-2); }
 .ctl output { font-size: 13.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
 input[type="range"] { width: 150px; accent-color: var(--series-1); }
@@ -824,20 +825,45 @@ sliders and watch the curves respond.</p>
 
     <p class="chart-title">2 · Build your trade</p>
     <div class="controls" id="tmPosControls">
-      <div class="ctl"><label>Option type</label>
+      <div class="ctl"><label for="tmStrat">Strategy</label>
+        <select id="tmStrat" style="max-width:250px">
+          <option value="single" selected>Single option (pick call/put below)</option>
+          <optgroup label="Bet on a range (pin / stay put)">
+            <option value="butterfly">Butterfly — pin near a strike</option>
+            <option value="iron-butterfly">Iron butterfly — get paid to pin</option>
+            <option value="iron-condor">Iron condor — stay inside a band</option>
+          </optgroup>
+          <optgroup label="Bet on direction, capped">
+            <option value="bull-call">Bull call spread — up, cheaply</option>
+            <option value="bear-put">Bear put spread — down, cheaply</option>
+          </optgroup>
+          <optgroup label="Bet on a big move (either way)">
+            <option value="straddle">Long straddle — big move coming</option>
+            <option value="strangle">Long strangle — bigger move, cheaper</option>
+          </optgroup>
+          <optgroup label="Own the stock, add an option">
+            <option value="covered-call">Covered call — income on shares</option>
+            <option value="protective-put">Protective put — insurance on shares</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="ctl" id="tmTypeCtl"><label>Option type</label>
         <div class="seg" id="tmType" role="group" aria-label="Call or put">
           <button aria-pressed="true" data-v="call">Call</button>
           <button aria-pressed="false" data-v="put">Put</button>
         </div>
       </div>
-      <div class="ctl"><label>Your side</label>
+      <div class="ctl" id="tmSideCtl"><label>Your side</label>
         <div class="seg" id="tmSide" role="group" aria-label="Buy or sell">
           <button aria-pressed="true" data-v="buy">Buy</button>
           <button aria-pressed="false" data-v="sell">Sell</button>
         </div>
       </div>
-      <div class="ctl"><label for="tmMoney">Strike</label>
+      <div class="ctl"><label for="tmMoney" id="tmMoneyLabel">Strike</label>
         <select id="tmMoney"></select>
+      </div>
+      <div class="ctl" id="tmWidthCtl" hidden><label for="tmWidth">Wing width</label>
+        <select id="tmWidth"></select>
       </div>
       <div class="ctl"><label for="tmExpOff">Expiry</label>
         <select id="tmExpOff"></select>
@@ -848,7 +874,7 @@ sliders and watch the curves respond.</p>
     </div>
 
     <div class="tiles">
-      <div class="tile"><div class="t-label">Estimated premium</div><div class="t-value" id="tmPrem">—</div><div class="t-note" id="tmPremNote"></div></div>
+      <div class="tile"><div class="t-label" id="tmPremLabel">Estimated premium</div><div class="t-value" id="tmPrem">—</div><div class="t-note" id="tmPremNote"></div></div>
       <div class="tile"><div class="t-label">Breakeven at expiry</div><div class="t-value" id="tmBE">—</div><div class="t-note" id="tmBENote"></div></div>
       <div class="tile"><div class="t-label">Expiry date</div><div class="t-value" id="tmExpDate">—</div><div class="t-note" id="tmExpNote"></div></div>
     </div>
@@ -875,10 +901,11 @@ sliders and watch the curves respond.</p>
   </div>
 
   <div class="callout"><span class="kicker">How the premium is estimated</span>
-  <p>There is no free archive of historical option prices, so the premium is <b>estimated</b> with
-  Black–Scholes from the stock’s realized volatility over the prior 3 months — with a +35% markup
-  on earnings scenarios, since options are always pricier before a report. Real premiums differed,
-  sometimes a lot. The stock prices and earnings dates themselves are real (split-adjusted).</p></div>
+  <p>There is no free archive of historical option prices, so premiums (every leg of a strategy)
+  are <b>estimated</b> with Black–Scholes from the stock’s realized volatility over the prior
+  3 months — with a +35% markup on earnings scenarios, since options are always pricier before a
+  report. Real premiums differed, sometimes a lot. The stock prices and earnings dates themselves
+  are real (split-adjusted).</p></div>
 </main>
 
 <footer class="site">
@@ -2258,10 +2285,65 @@ const TM_LOOKBACK = 120;                 // trading days of history shown
 const TM_EXP_OFFS = [10, 21, 42, 63];    // trading-day expiry choices
 const TM_EXP_NAMES = { 10: "≈2 weeks", 21: "≈1 month", 42: "≈2 months", 63: "≈3 months" };
 const TM_MONEYS = [-10, -5, 0, 5, 10];   // strike % vs entry price
-const tm = { tk: "NVDA", mode: "earnings", type: "call", side: "buy",
-             money: 0, expOff: 21, n: 1, spyNote: false,
+const tm = { tk: "NVDA", mode: "earnings", strat: "single", type: "call", side: "buy",
+             money: 0, w: 5, n: 1, expOff: 21, spyNote: false,
              entryIdx: null, revealed: false, done: false, prog: 0, timer: null };
+const TM_WIDTHS = [2.5, 5, 7.5, 10];   // wing width, % of entry price
 let tmDateIdx = null;
+
+/* Multi-leg recipes on a synthetic strike ladder. Legs are placed at whole
+   ladder ranks (−2…+2 wing units from the centre strike), so no two strikes
+   can round onto each other even on low-priced historical stocks. */
+const TM_STRATS = {
+  "butterfly":      { name: "call butterfly",
+    build: g => [g.C(-1, 1), g.C(0, -2), g.C(1, 1)] },
+  "iron-butterfly": { name: "iron butterfly",
+    build: g => [g.P(-1, 1), g.P(0, -1), g.C(0, -1), g.C(1, 1)] },
+  "iron-condor":    { name: "iron condor",
+    build: g => [g.P(-2, 1), g.P(-1, -1), g.C(1, -1), g.C(2, 1)] },
+  "bull-call":      { name: "bull call spread",
+    build: g => [g.C(0, 1), g.C(1, -1)] },
+  "bear-put":       { name: "bear put spread",
+    build: g => [g.P(0, 1), g.P(-1, -1)] },
+  "straddle":       { name: "long straddle", noWidth: true,
+    build: g => [g.C(0, 1), g.P(0, 1)] },
+  "strangle":       { name: "long strangle",
+    build: g => [g.P(-1, 1), g.C(1, 1)] },
+  "covered-call":   { name: "covered call",
+    build: g => [g.S(100), g.C(1, -1)] },
+  "protective-put": { name: "protective put",
+    build: g => [g.S(100), g.P(-1, 1)] }
+};
+function tmInc(v) { return v < 25 ? 0.5 : v < 100 ? 1 : v < 250 ? 2.5 : 5; }
+/* rank → strike: centre strike ± rank whole wing units of w% (≥1 increment) */
+function tmLadder(spot, w) {
+  const K0 = tmRoundStrike(spot * (1 + tm.money / 100));
+  const inc = tmInc(spot);
+  const unit = Math.max(1, Math.round(w / 100 * spot / inc)) * inc;
+  return rank => Math.max(inc, Math.round((K0 + rank * unit) * 100) / 100);
+}
+function tmBuildLegs(spot, sigma, Tyr) {
+  const Kof = tmLadder(spot, tm.w);
+  const mk = (kind, rank, qty) => {
+    const K = Kof(rank);
+    const v = bs(spot, K, Tyr, sigma);
+    return { kind, K, qty,
+      prem: Math.max(0.01, Math.round((kind === "C" ? v.call : v.put) * 100) / 100) };
+  };
+  if (tm.strat === "single") {
+    return [mk(tm.type === "call" ? "C" : "P", 0, tm.side === "buy" ? 1 : -1)];
+  }
+  const g = { C: (r, q) => mk("C", r, q), P: (r, q) => mk("P", r, q),
+              S: q => ({ kind: "S", K: 0, qty: q, prem: spot }) };
+  return TM_STRATS[tm.strat].build(g);
+}
+function tmSyncControls() {
+  const multi = tm.strat !== "single";
+  document.getElementById("tmTypeCtl").hidden = multi;
+  document.getElementById("tmSideCtl").hidden = multi;
+  document.getElementById("tmWidthCtl").hidden = !multi || !!TM_STRATS[tm.strat]?.noWidth;
+  document.getElementById("tmMoneyLabel").textContent = multi ? "Center strike" : "Strike";
+}
 
 function tileSign(id, text, v) {
   const e2 = document.getElementById(id);
@@ -2341,6 +2423,16 @@ function tmFillSelects() {
     o.selected = off === tm.expOff;
     eSel.appendChild(o);
   }
+  const wSel = document.getElementById("tmWidth");
+  wSel.textContent = "";
+  for (const w of TM_WIDTHS) {
+    const Kof = tmLadder(spot, w);
+    const o = document.createElement("option");
+    o.value = w;
+    o.textContent = "±" + w + "% · wings $" + Kof(-1) + " / $" + Kof(1);
+    o.selected = w === tm.w;
+    wSel.appendChild(o);
+  }
 }
 
 function renderTimeMachine() {
@@ -2349,29 +2441,61 @@ function renderTimeMachine() {
   if (!HIST) { status.textContent = "hist.js not found — run build_history.py."; return; }
   const ds = HIST.dates, e = tm.entryIdx;
   const spot = tmClose(e);
-  const K = tmRoundStrike(spot * (1 + tm.money / 100));
   const expIdx = e + tm.expOff;
   const Tyr = (new Date(ds[expIdx]) - new Date(ds[e])) / 86400e3 / 365;
   const sigma = tmSigma();
-  const isCall = tm.type === "call";
-  const v0 = bs(spot, K, Tyr, sigma);
-  const prem = Math.max(0.01, Math.round((isCall ? v0.call : v0.put) * 100) / 100);
-  const sign = tm.side === "buy" ? 1 : -1;
-  const mult = 100 * tm.n;
-  const premTotal = prem * mult;
-  const be = isCall ? K + prem : K - prem;
+  const multi = tm.strat !== "single";
+  const stratName = multi ? TM_STRATS[tm.strat].name
+    : (tm.side === "buy" ? "long " : "short ") + tm.type;
+  const legs = tmBuildLegs(spot, sigma, Tyr);
+  const cost = legs.reduce((a, l) => a + (l.kind === "S" ? l.qty * l.prem : l.qty * 100 * l.prem), 0);
+  const costTotal = cost * tm.n;
+  const legsVal = (S, Trem) => legs.reduce((a, l) => {
+    if (l.kind === "S") return a + l.qty * S;
+    const v = bs(S, l.K, Math.max(0, Trem), sigma);
+    return a + l.qty * 100 * (l.kind === "C" ? v.call : v.put);
+  }, 0);
+  const plAt = (S, Trem) => (legsVal(S, Trem) - cost) * tm.n;
+  const Ks = [...new Set(legs.filter(l => l.kind !== "S").map(l => l.K))].sort((a, b) => a - b);
+
+  /* expiry payoff is piecewise linear → breakevens/extremes from $0, strikes, far end */
+  const top = spot * 3;
+  const cands = [0, ...Ks, top].map(S => ({ S, v: plAt(S, 0) }));
+  const upSlope = plAt(top + 1, 0) - plAt(top, 0);
+  const vMin = Math.min(...cands.map(c => c.v));
+  const bes = [];
+  for (let i = 1; i < cands.length; i++) {
+    const a = cands[i - 1], b = cands[i];
+    if ((a.v < 0 && b.v > 0) || (a.v > 0 && b.v < 0)) {
+      bes.push(a.S + (0 - a.v) / (b.v - a.v) * (b.S - a.S));
+    } else if (b.v === 0 && a.v !== 0) bes.push(b.S);
+  }
+  const lossBounded = upSlope >= -1e-9;
+  const riskBase = lossBounded && vMin < 0 ? Math.abs(vMin) : Math.abs(costTotal) || 1;
 
   status.textContent = tm.tk + " on " + tmFmtDate(ds[e]) +
     (tm.mode === "earnings" ? " — a real earnings report date" : " — a random trading day") +
     " · price $" + spot.toFixed(2) + " · est. volatility " + Math.round(sigma * 100) + "%" +
     (tm.spyNote ? " · SPY is an ETF (no earnings), random day used" : "");
-  document.getElementById("tmPrem").textContent = "$" + prem.toFixed(2);
-  document.getElementById("tmPremNote").textContent = "per share · you " +
-    (sign > 0 ? "pay " : "collect ") + fmtCompact$(premTotal) + " for " +
-    tm.n + (tm.n === 1 ? " contract" : " contracts");
-  document.getElementById("tmBE").textContent = "$" + be.toFixed(2);
-  document.getElementById("tmBENote").textContent = ((be - spot) / spot >= 0 ? "+" : "−") +
-    Math.abs((be - spot) / spot * 100).toFixed(1) + "% from entry";
+  document.getElementById("tmPremLabel").textContent = multi ? "Estimated net cost" : "Estimated premium";
+  if (multi) {
+    document.getElementById("tmPrem").textContent = fmtCompact$(Math.abs(costTotal));
+    document.getElementById("tmPremNote").textContent =
+      (costTotal >= 0 ? "net debit — you pay it up front · " : "net credit — you collect it up front · ") +
+      legs.length + " legs × " + tm.n + (tm.n === 1 ? " combo" : " combos");
+  } else {
+    document.getElementById("tmPrem").textContent = "$" + legs[0].prem.toFixed(2);
+    document.getElementById("tmPremNote").textContent = "per share · you " +
+      (tm.side === "buy" ? "pay " : "collect ") + fmtCompact$(Math.abs(costTotal)) + " for " +
+      tm.n + (tm.n === 1 ? " contract" : " contracts");
+  }
+  document.getElementById("tmBE").textContent =
+    bes.length ? bes.map(b => "$" + b.toFixed(2)).join(" / ") : "—";
+  document.getElementById("tmBENote").textContent =
+    bes.length === 1 ? ((bes[0] - spot) / spot >= 0 ? "+" : "−") +
+      Math.abs((bes[0] - spot) / spot * 100).toFixed(1) + "% from entry" :
+    bes.length === 2 ? "profit " + (plAt((bes[0] + bes[1]) / 2, 0) > 0 ? "between them" : "outside them") :
+    bes.length ? "where the expiry P/L crosses zero" : "no zero crossing at expiry";
   document.getElementById("tmExpDate").textContent = tmFmtDate(ds[expIdx], { month: "short", day: "numeric", year: "numeric" });
   document.getElementById("tmExpNote").textContent = tm.expOff + " trading days after entry";
 
@@ -2383,7 +2507,7 @@ function renderTimeMachine() {
   const futVals = xs.map(i => (i >= e && i <= showTo) ? tmClose(i) : NaN);
   const vis = [];
   for (let i = x0; i <= showTo; i++) vis.push(tmClose(i));
-  vis.push(K);
+  vis.push(...Ks);
   let lo = Math.min(...vis), hi = Math.max(...vis);
   const pad = (hi - lo) * 0.08 || 1;
   const series = [{ name: "Before your trade", color: T.s1, values: histVals }];
@@ -2402,7 +2526,8 @@ function renderTimeMachine() {
     annotations: [
       { type: "vline", x: e, label: "you trade here" },
       { type: "vline", x: expIdx, label: "expiry", labelPos: "bottom" },
-      { type: "hline", y: K, label: "strike $" + K }
+      ...Ks.map(K => ({ type: "hline", y: K,
+        label: (Ks.length === 1 ? "strike " : "") + "$" + K }))
     ]
   });
 
@@ -2411,12 +2536,11 @@ function renderTimeMachine() {
   if (!tm.revealed) return;
 
   /* P/L over the holding period (axis fixed to the full path so it doesn't jump) */
-  const optVal = (S, Trem) => { const v = bs(S, K, Math.max(0, Trem), sigma); return isCall ? v.call : v.put; };
   const pAll = [], pxs = [];
   for (let i = e; i <= expIdx; i++) {
     const Trem = (new Date(ds[expIdx]) - new Date(ds[i])) / 86400e3 / 365;
     pxs.push(i);
-    pAll.push(sign * (optVal(tmClose(i), Trem) - prem) * mult);
+    pAll.push(plAt(tmClose(i), Trem));
   }
   const pShow = pAll.map((v, j) => (e + j <= showTo ? v : NaN));
   let plo = Math.min(...pAll, 0), phi = Math.max(...pAll, 0);
@@ -2442,14 +2566,17 @@ function renderTimeMachine() {
   const plCur = pAll[showTo - e];
   tileSign("tmPL", fmtPL(plCur), plCur);
   document.getElementById("tmPLNote").textContent = tm.done ? "held to expiry" : "so far…";
-  tileSign("tmRet", (plCur >= 0 ? "+" : "−") + Math.abs(plCur / premTotal * 100).toFixed(0) + "%", plCur);
-  document.getElementById("tmRetNote").textContent = "on the premium " + (sign > 0 ? "paid" : "collected");
-  const sharePL = premTotal / spot * (Send - spot);
+  tileSign("tmRet", (plCur >= 0 ? "+" : "−") + Math.abs(plCur / riskBase * 100).toFixed(0) + "%", plCur);
+  document.getElementById("tmRetNote").textContent = multi
+    ? (lossBounded && vMin < 0 ? "on the max you could lose" : "on the net premium")
+    : "on the premium " + (tm.side === "buy" ? "paid" : "collected");
+  const stake = costTotal > 0 ? costTotal : riskBase;
+  const sharePL = stake / spot * (Send - spot);
   tileSign("tmVs", fmtPL(sharePL), sharePL);
-  document.getElementById("tmVsNote").textContent = "if " + fmtCompact$(premTotal) + " had bought shares instead";
+  document.getElementById("tmVsNote").textContent = "if " + fmtCompact$(stake) + " had bought shares instead";
   document.getElementById("tmVerdict").textContent = tm.done
     ? tm.tk + " went " + (stockPct >= 0 ? "up " : "down ") + Math.abs(stockPct).toFixed(1) +
-      "% by expiry — your " + (tm.side === "buy" ? "long" : "short") + " " + tm.type + " " +
+      "% by expiry — your " + stratName + " " +
       (plCur >= 0 ? "made " : "lost ") + fmtCompact$(Math.abs(plCur)) +
       ". Change the trade above to see what a different position would have done."
     : "Rolling history forward…";
@@ -2468,7 +2595,13 @@ if (HIST) {
   document.getElementById("tmNew").addEventListener("click", () => { tmPick(); renderTimeMachine(); });
   segWire("tmType", "type", tm, tmPosChanged);
   segWire("tmSide", "side", tm, tmPosChanged);
-  document.getElementById("tmMoney").addEventListener("change", e2 => { tm.money = +e2.target.value; tmPosChanged(); });
+  document.getElementById("tmStrat").addEventListener("change", e2 => {
+    tm.strat = e2.target.value; tmSyncControls(); tmPosChanged();
+  });
+  document.getElementById("tmWidth").addEventListener("change", e2 => { tm.w = +e2.target.value; tmPosChanged(); });
+  document.getElementById("tmMoney").addEventListener("change", e2 => {
+    tm.money = +e2.target.value; tmFillSelects(); tmPosChanged();
+  });
   document.getElementById("tmExpOff").addEventListener("change", e2 => { tm.expOff = +e2.target.value; tmPosChanged(); });
   document.getElementById("tmN").addEventListener("input", e2 => {
     tm.n = Math.max(1, Math.min(1000, Math.round(+e2.target.value || 1))); tmPosChanged();
@@ -2487,6 +2620,7 @@ if (HIST) {
     }, 80);
     renderTimeMachine();
   });
+  tmSyncControls();
   tmPick();
 }
 
