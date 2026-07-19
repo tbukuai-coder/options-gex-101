@@ -26,8 +26,12 @@ and the 0DTE era. Four tabs:
   price chart up to that day, build a trade — a single option (call/put × buy/sell ×
   strike ±10%) or any of the nine multi-leg strategies from the Strategies tab
   (butterfly, iron condor, straddle, …; legs priced on a synthetic strike ladder with a
-  % wing-width picker) — pick an expiry (2 weeks–3 months), then reveal: the true price
-  path animates forward and your P/L is scored (with a same-money-in-shares comparison).
+  % wing-width picker) — pick an expiry (2 weeks–3 months), check the max-profit /
+  max-loss tiles, then reveal: the true price path animates forward and your P/L is
+  scored (with a same-money-in-shares comparison). After the reveal an **exit slider**
+  lets you sell early on any day (Black–Scholes-estimated sale price), and a
+  "best exit" tile shows where the mark-to-market actually peaked — usually before
+  expiry.
   After the reveal you can flip the position to see what a different trade would have
   done on the same day. An **earnings-season playbook** offers nine one-click sample
   cases — vol buyer (straddle), budget vol buyer (strangle), vol seller (iron condor),

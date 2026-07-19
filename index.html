@@ -162,7 +162,7 @@ table.chain tr.atm td.k { color: var(--series-1); }
   margin: 4px 0 14px;
 }
 .ctl { display: flex; flex-direction: column; gap: 4px; min-width: 130px; }
-.ctl[hidden] { display: none; }
+.ctl[hidden], .controls[hidden] { display: none; }
 .ctl label { font-size: 12.5px; color: var(--ink-2); }
 .ctl output { font-size: 13.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
 input[type="range"] { width: 150px; accent-color: var(--series-1); }
@@ -1175,6 +1175,8 @@ sliders and watch the curves respond.</p>
     <div class="tiles">
       <div class="tile"><div class="t-label" id="tmPremLabel">Estimated premium</div><div class="t-value" id="tmPrem">—</div><div class="t-note" id="tmPremNote"></div></div>
       <div class="tile"><div class="t-label">Breakeven at expiry</div><div class="t-value" id="tmBE">—</div><div class="t-note" id="tmBENote"></div></div>
+      <div class="tile"><div class="t-label">Max profit</div><div class="t-value" id="tmMaxWin">—</div><div class="t-note" id="tmMaxWinNote"></div></div>
+      <div class="tile"><div class="t-label">Max loss</div><div class="t-value" id="tmMaxLoss">—</div><div class="t-note" id="tmMaxLossNote"></div></div>
       <div class="tile"><div class="t-label">Expiry date</div><div class="t-value" id="tmExpDate">—</div><div class="t-note" id="tmExpNote"></div></div>
     </div>
 
@@ -1186,16 +1188,25 @@ sliders and watch the curves respond.</p>
 
     <div id="tmResults" hidden>
       <h3 id="tmVerdict"></h3>
+      <div class="controls" id="tmExitCtl" hidden>
+        <div class="ctl"><label for="tmExit">💰 Sell early — exit on</label>
+          <input type="range" id="tmExit" min="0" max="1" step="1">
+          <output id="tmExitOut"></output>
+        </div>
+      </div>
       <div class="chart" id="tmPLChart"></div>
       <div class="tiles">
         <div class="tile"><div class="t-label">The stock</div><div class="t-value" id="tmStockMove">—</div><div class="t-note" id="tmStockNote"></div></div>
-        <div class="tile"><div class="t-label">Your option P/L</div><div class="t-value" id="tmPL">—</div><div class="t-note" id="tmPLNote"></div></div>
-        <div class="tile"><div class="t-label">Return on premium</div><div class="t-value" id="tmRet">—</div><div class="t-note" id="tmRetNote"></div></div>
+        <div class="tile"><div class="t-label">Your P/L</div><div class="t-value" id="tmPL">—</div><div class="t-note" id="tmPLNote"></div></div>
+        <div class="tile"><div class="t-label">Return on risk</div><div class="t-value" id="tmRet">—</div><div class="t-note" id="tmRetNote"></div></div>
         <div class="tile"><div class="t-label">Same money in shares</div><div class="t-value" id="tmVs">—</div><div class="t-note" id="tmVsNote"></div></div>
+        <div class="tile"><div class="t-label">Best exit</div><div class="t-value" id="tmPeak">—</div><div class="t-note" id="tmPeakNote"></div></div>
       </div>
       <p class="tryit"><b>Notice:</b> options turn small stock moves into big percentage wins and
       losses — and being right about <i>direction</i> isn’t enough, you also have to beat the
-      premium before expiry. Hit 🎲 for another moment in history.</p>
+      premium before expiry. Drag the <b>exit slider</b>: P/L often peaks well before expiry —
+      once the move has happened, every extra day you hold is theta handed back (§5 of the Guide).
+      Hit 🎲 for another moment in history.</p>
     </div>
   </div>
 
@@ -2855,7 +2866,7 @@ const TM_EXP_OFFS = [10, 21, 42, 63];    // trading-day expiry choices
 const TM_EXP_NAMES = { 10: "≈2 weeks", 21: "≈1 month", 42: "≈2 months", 63: "≈3 months" };
 const TM_MONEYS = [-10, -5, 0, 5, 10];   // strike % vs entry price
 const tm = { tk: "NVDA", mode: "earnings", strat: "single", type: "call", side: "buy",
-             money: 0, w: 5, n: 1, expOff: 21, spyNote: false,
+             money: 0, w: 5, n: 1, expOff: 21, spyNote: false, exit: null,
              entryIdx: null, revealed: false, done: false, prog: 0, timer: null };
 const TM_WIDTHS = [2.5, 5, 7.5, 10];   // wing width, % of entry price
 let tmDateIdx = null;
@@ -3045,7 +3056,7 @@ function tmEarningsIdxs() {
 }
 function tmPick() {
   clearInterval(tm.timer); tm.timer = null;
-  tm.revealed = false; tm.done = false; tm.prog = 0; tm.spyNote = false;
+  tm.revealed = false; tm.done = false; tm.prog = 0; tm.spyNote = false; tm.exit = null;
   if (tm.mode === "earnings" && !HIST.tickers[tm.tk].earnings.length) {
     tm.mode = "random"; tm.spyNote = true;
     document.querySelectorAll("#tmMode button").forEach(b =>
@@ -3134,6 +3145,7 @@ function renderTimeMachine() {
       bes.push(a.S + (0 - a.v) / (b.v - a.v) * (b.S - a.S));
     } else if (b.v === 0 && a.v !== 0) bes.push(b.S);
   }
+  const vMax = Math.max(...cands.map(c => c.v));
   const lossBounded = upSlope >= -1e-9;
   const riskBase = lossBounded && vMin < 0 ? Math.abs(vMin) : Math.abs(costTotal) || 1;
 
@@ -3160,6 +3172,21 @@ function renderTimeMachine() {
       Math.abs((bes[0] - spot) / spot * 100).toFixed(1) + "% from entry" :
     bes.length === 2 ? "profit " + (plAt((bes[0] + bes[1]) / 2, 0) > 0 ? "between them" : "outside them") :
     bes.length ? "where the expiry P/L crosses zero" : "no zero crossing at expiry";
+  if (upSlope > 1e-9) {
+    document.getElementById("tmMaxWin").textContent = "Unlimited";
+    document.getElementById("tmMaxWinNote").textContent = "no ceiling on a big enough rally";
+  } else {
+    document.getElementById("tmMaxWin").textContent = fmtCompact$(vMax);
+    document.getElementById("tmMaxWinNote").textContent = stWhereNote(cands, vMax, top);
+  }
+  if (!lossBounded) {
+    document.getElementById("tmMaxLoss").textContent = "Unlimited";
+    document.getElementById("tmMaxLossNote").textContent = "no floor on a big enough rally";
+  } else {
+    document.getElementById("tmMaxLoss").textContent = fmtCompact$(Math.abs(Math.min(vMin, 0)));
+    document.getElementById("tmMaxLossNote").textContent =
+      vMin >= 0 ? "cannot lose at expiry" : stWhereNote(cands, vMin, top);
+  }
   document.getElementById("tmExpDate").textContent = tmFmtDate(ds[expIdx], { month: "short", day: "numeric", year: "numeric" });
   document.getElementById("tmExpNote").textContent = tm.expOff + " trading days after entry";
 
@@ -3206,6 +3233,23 @@ function renderTimeMachine() {
     pxs.push(i);
     pAll.push(plAt(tmClose(i), Trem));
   }
+  /* exit day: while animating, follow the animation; once done, the slider rules */
+  const exitIdx = tm.done
+    ? Math.min(tm.exit == null ? tm.expOff : tm.exit, tm.expOff)
+    : showTo - e;
+  const soldEarly = tm.done && exitIdx < tm.expOff;
+  const exitCtl = document.getElementById("tmExitCtl");
+  exitCtl.hidden = !tm.done;
+  if (tm.done) {
+    const sl = document.getElementById("tmExit");
+    sl.max = tm.expOff;
+    sl.value = exitIdx;
+    document.getElementById("tmExitOut").textContent = soldEarly
+      ? tmFmtDate(ds[e + exitIdx], { month: "short", day: "numeric" }) + " · " +
+        (tm.expOff - exitIdx) + " trading day" + (tm.expOff - exitIdx === 1 ? "" : "s") + " early"
+      : "expiry · " + tmFmtDate(ds[expIdx], { month: "short", day: "numeric" });
+  }
+
   const pShow = pAll.map((v, j) => (e + j <= showTo ? v : NaN));
   let plo = Math.min(...pAll, 0), phi = Math.max(...pAll, 0);
   const ppad = (phi - plo) * 0.1 || 100;
@@ -3213,23 +3257,28 @@ function renderTimeMachine() {
     const j = Math.max(0, Math.min(ds.length - 1, Math.round(i)));
     return tmFmtDate(ds[j], { month: "short", day: "numeric" });
   };
+  const plCur = pAll[exitIdx];
   renderLineChart(document.getElementById("tmPLChart"), {
     height: 250, xDomain: [e, expIdx], yDomain: [plo - ppad, phi + ppad], xs: pxs,
-    series: [{ name: "Position P/L", color: T.s1, values: pShow }],
+    series: [{ name: "Position P/L (sell that day)", color: T.s1, values: pShow }],
     plFill: 0, zeroLine: true,
     fmtX: fmtIdxDay, ttFmtX: i => tmFmtDate(ds[Math.round(i)]),
     fmtY: fmtCompact$, ttFmtY: fmtPL,
     xLabel: "Date", yLabel: "P/L ($)",
-    ariaLabel: "Position profit and loss over the holding period"
+    ariaLabel: "Position profit and loss over the holding period",
+    annotations: tm.done ? [{ type: "point", x: e + exitIdx, y: plCur, color: T.s1,
+      label: soldEarly ? "your exit" : "", anchor: exitIdx > tm.expOff * 0.7 ? "end" : "start",
+      dy: -10 }] : []
   });
 
-  const Send = tmClose(showTo);
+  const Send = tmClose(e + exitIdx);
   const stockPct = (Send - spot) / spot * 100;
   tileSign("tmStockMove", (stockPct >= 0 ? "+" : "−") + Math.abs(stockPct).toFixed(1) + "%", stockPct);
   document.getElementById("tmStockNote").textContent = "$" + spot.toFixed(2) + " → $" + Send.toFixed(2);
-  const plCur = pAll[showTo - e];
   tileSign("tmPL", fmtPL(plCur), plCur);
-  document.getElementById("tmPLNote").textContent = tm.done ? "held to expiry" : "so far…";
+  document.getElementById("tmPLNote").textContent = tm.done
+    ? (soldEarly ? "sold early — Black–Scholes-estimated sale price" : "held to expiry")
+    : "so far…";
   tileSign("tmRet", (plCur >= 0 ? "+" : "−") + Math.abs(plCur / riskBase * 100).toFixed(0) + "%", plCur);
   document.getElementById("tmRetNote").textContent = multi
     ? (lossBounded && vMin < 0 ? "on the max you could lose" : "on the net premium")
@@ -3238,9 +3287,15 @@ function renderTimeMachine() {
   const sharePL = stake / spot * (Send - spot);
   tileSign("tmVs", fmtPL(sharePL), sharePL);
   document.getElementById("tmVsNote").textContent = "if " + fmtCompact$(stake) + " had bought shares instead";
+  let peakI = 0;
+  pAll.forEach((v, j) => { if (v > pAll[peakI]) peakI = j; });
+  tileSign("tmPeak", fmtPL(pAll[peakI]), pAll[peakI]);
+  document.getElementById("tmPeakNote").textContent = "best mark-to-market · " +
+    tmFmtDate(ds[e + peakI], { month: "short", day: "numeric" }) +
+    (peakI === tm.expOff ? " (expiry itself)" : " — " + (tm.expOff - peakI) + "d before expiry");
   document.getElementById("tmVerdict").textContent = tm.done
     ? tm.tk + " went " + (stockPct >= 0 ? "up " : "down ") + Math.abs(stockPct).toFixed(1) +
-      "% by expiry — your " + stratName + " " +
+      "% by " + (soldEarly ? "your exit" : "expiry") + " — your " + stratName + " " +
       (plCur >= 0 ? "made " : "lost ") + fmtCompact$(Math.abs(plCur)) +
       ". Change the trade above to see what a different position would have done."
     : "Rolling history forward…";
@@ -3265,6 +3320,7 @@ if (HIST) {
     tm.strat = e2.target.value; tmClearCase(); tmSyncControls(); tmPosChanged();
   });
   document.getElementById("tmWidth").addEventListener("change", e2 => { tm.w = +e2.target.value; tmPosChanged(); });
+  document.getElementById("tmExit").addEventListener("input", e2 => { tm.exit = +e2.target.value; renderTimeMachine(); });
   document.getElementById("tmMoney").addEventListener("change", e2 => {
     tm.money = +e2.target.value; tmFillSelects(); tmPosChanged();
   });
