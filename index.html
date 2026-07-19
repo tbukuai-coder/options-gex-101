@@ -23,6 +23,8 @@
   --div-neg:     #e34948;  /* diverging − pole (red)  */
   --div-mid:     #f0efec;
   --accent-wash: rgba(42,120,214,0.10);
+  --pl-up:       #006300;  /* success text on light */
+  --pl-down:     #d03b3b;
 }
 :root[data-theme="dark"] { color-scheme: dark; }
 @media (prefers-color-scheme: dark) {
@@ -43,6 +45,8 @@
     --div-neg:     #e66767;
     --div-mid:     #383835;
     --accent-wash: rgba(57,135,229,0.12);
+    --pl-up:       #0ca30c;
+    --pl-down:     #e05252;
   }
 }
 :root[data-theme="dark"] {
@@ -61,6 +65,8 @@
   --div-neg:     #e66767;
   --div-mid:     #383835;
   --accent-wash: rgba(57,135,229,0.12);
+  --pl-up:       #0ca30c;
+  --pl-down:     #e05252;
 }
 
 * { box-sizing: border-box; }
@@ -191,6 +197,8 @@ button.plain:hover { border-color: var(--baseline); }
 }
 .tile .t-label { font-size: 12px; color: var(--ink-2); }
 .tile .t-value { font-size: 22px; font-weight: 600; margin-top: 2px; }
+.tile .t-value.pos { color: var(--pl-up); }
+.tile .t-value.neg { color: var(--pl-down); }
 .tile .t-note { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
 
 /* ---------- dealer flow diagram ---------- */
@@ -854,6 +862,23 @@ function renderLineChart(container, cfg) {
     lb.textContent = cfg.yLabel;
   }
 
+  /* profit/loss wash: shade cfg.plFill's series to the zero line —
+     status green above zero, status red below (drawn under the lines) */
+  if (cfg.plFill != null && y0 < 0 && y1 > 0) {
+    const vals = cfg.series[cfg.plFill].values;
+    let area = "M" + sx(cfg.xs[0]).toFixed(1) + " " + sy(0).toFixed(1);
+    vals.forEach((v, i) => { area += "L" + sx(cfg.xs[i]).toFixed(1) + " " + sy(v).toFixed(1); });
+    area += "L" + sx(cfg.xs[cfg.xs.length - 1]).toFixed(1) + " " + sy(0).toFixed(1) + "Z";
+    const cpPos = el("clipPath", { id: "clip-pos-" + container.id }, svg);
+    el("rect", { x: M.l, y: M.t, width: iw, height: Math.max(0, sy(0) - M.t) }, cpPos);
+    const cpNeg = el("clipPath", { id: "clip-neg-" + container.id }, svg);
+    el("rect", { x: M.l, y: sy(0), width: iw, height: Math.max(0, M.t + ih - sy(0)) }, cpNeg);
+    el("path", { d: area, fill: "#0ca30c", opacity: 0.12,
+      "clip-path": `url(#clip-pos-${container.id})` }, svg);
+    el("path", { d: area, fill: "#d03b3b", opacity: 0.12,
+      "clip-path": `url(#clip-neg-${container.id})` }, svg);
+  }
+
   /* series lines (2px, round joins) */
   const clip = el("clipPath", { id: "clip-" + container.id }, svg);
   el("rect", { x: M.l, y: M.t - 6, width: iw, height: ih + 6 }, clip);
@@ -1131,6 +1156,7 @@ function renderPayoff() {
   renderLineChart(document.getElementById("payoffChart"), {
     height: 300, xDomain: [70, 130], yDomain: [-span, span], xs,
     series: [{ name: "P/L at expiry", color: T.s1, values: vals }],
+    plFill: 0,
     fmtX: v => "$" + v, fmtY: fmt$, ttFmtY: fmt$2, zeroLine: true,
     xLabel: "Stock price at expiry", yLabel: "Profit / loss per share",
     ariaLabel: "Option profit and loss at expiry",
@@ -1532,11 +1558,16 @@ function renderPlayground() {
   document.getElementById("pgWhatIfOut").textContent = "$" + (+wi).toFixed(2).replace(/\.00$/, "") +
     " (" + ((wi - spot) / spot * 100 >= 0 ? "+" : "−") + Math.abs((wi - spot) / spot * 100).toFixed(1) + "%)";
   const plN = plNow(wi), plE = plExp(wi);
-  document.getElementById("pgPLNow").textContent = fmtPL(plN);
-  document.getElementById("pgPLExp").textContent = fmtPL(plE);
+  const setPL = (id, text, v) => {
+    const e = document.getElementById(id);
+    e.textContent = text;
+    e.classList.toggle("pos", v > 0);
+    e.classList.toggle("neg", v < 0);
+  };
+  setPL("pgPLNow", fmtPL(plN), plN);
+  setPL("pgPLExp", fmtPL(plE), plE);
   document.getElementById("pgPLExpNote").textContent = "in " + Math.round(dte) + " days, if it closes at $" + wi;
-  document.getElementById("pgRet").textContent =
-    (plE >= 0 ? "+" : "−") + Math.abs(plE / premTotal * 100).toFixed(0) + "%";
+  setPL("pgRet", (plE >= 0 ? "+" : "−") + Math.abs(plE / premTotal * 100).toFixed(0) + "%", plE);
   document.getElementById("pgRetNote").textContent = "at expiry, on the premium " +
     (pg.side === "buy" ? "paid" : "collected");
 
@@ -1553,6 +1584,7 @@ function renderPlayground() {
       { name: "If it jumps there today", color: T.s1, values: nowVals },
       { name: "At expiry (" + Math.round(dte) + "d)", color: T.s2, values: expVals }
     ],
+    plFill: 1,
     fmtX: v => "$" + Math.round(v), ttFmtX: v => "stock at $" + v.toFixed(2),
     fmtY: fmtCompact$, ttFmtY: fmtPL, zeroLine: true,
     xLabel: "Stock price", yLabel: "Total profit / loss ($)",
