@@ -283,10 +283,12 @@ sliders and watch the curves respond.</p>
   <a href="#s2">2 · Price before expiry</a>
   <a href="#s3">3 · Delta</a>
   <a href="#s4">4 · Gamma</a>
-  <a href="#s5">5 · Dealers &amp; hedging</a>
-  <a href="#s6">6 · GEX</a>
-  <a href="#s7">7 · Market regimes</a>
-  <a href="#s8">8 · In the wild</a>
+  <a href="#s5">5 · Theta</a>
+  <a href="#s6">6 · Vega &amp; IV crush</a>
+  <a href="#s7">7 · Dealers &amp; hedging</a>
+  <a href="#s8">8 · GEX</a>
+  <a href="#s9">9 · Market regimes</a>
+  <a href="#s10">10 · In the wild</a>
   <a href="#glossary">Glossary</a>
 </div>
 
@@ -415,9 +417,92 @@ sliders and watch the curves respond.</p>
   </div>
 </section>
 
-<!-- ================= 5. DEALERS & DELTA HEDGING ================= -->
+<!-- ================= 5. THETA ================= -->
 <section id="s5">
-  <h2><span class="num">5</span>Dealers: the hedging machine on the other side</h2>
+  <h2><span class="num">5</span>Theta: the rent you pay for time</h2>
+  <p>Back in section 2 you watched the smooth value curve collapse onto the kinked payoff as expiry
+  approached. <b>Theta</b> is that melt measured per day: how much of an option’s <b>time value</b>
+  evaporates every day the stock does nothing. Buyers pay it; sellers collect it.</p>
+
+  <div class="card chart-card">
+    <p class="chart-title">Time value melting toward expiry (calls, stock parked at $100)</p>
+    <p class="chart-sub">Value of the same three calls as the calendar runs out — stock price never moves</p>
+    <div class="controls">
+      <div class="ctl"><label for="thetaIV">Implied volatility</label>
+        <input type="range" id="thetaIV" min="10" max="100" step="1" value="25">
+        <output id="thetaIVOut"></output>
+      </div>
+    </div>
+    <div class="chart" id="thetaChart"></div>
+    <div class="tiles">
+      <div class="tile"><div class="t-label">ATM time value · 60 days out</div><div class="t-value" id="thetaV60">—</div><div class="t-note">what you pay for two months of “maybe”</div></div>
+      <div class="tile"><div class="t-label">30 days out</div><div class="t-value" id="thetaV30">—</div><div class="t-note">half the calendar gone, ≈71% of the value left</div></div>
+      <div class="tile"><div class="t-label">7 days out</div><div class="t-value" id="thetaV7">—</div><div class="t-note">≈34% left — the final week burns fastest</div></div>
+    </div>
+    <p class="tryit"><b>Read it:</b> the melt is not a straight line. At-the-money time value shrinks
+    with the <b>square root</b> of remaining time — losing the first half of the calendar costs only
+    ~29% of the value, while the last week is a cliff. The out-of-the-money calls die earlier: once
+    a strike stops being reachable, its “maybe” is worth nothing long before expiry. Push IV up: the
+    rent gets more expensive, but the shape of the melt stays exactly the same.</p>
+  </div>
+
+  <div class="callout"><span class="kicker">Who earns theta</span>
+  <p>Every dollar of time value a buyer bleeds, a seller collects. That is the entire income engine
+  behind covered calls, iron condors and iron butterflies in the
+  <a href="#strategies">Strategies tab</a> — they are short options, so the calendar itself pays
+  them, and their nightmare is the other Greek on this page: a volatility spike.</p></div>
+</section>
+
+<!-- ================= 6. VEGA & IV CRUSH ================= -->
+<section id="s6">
+  <h2><span class="num">6</span>Vega: the price of expected drama — and the IV crush</h2>
+  <p>Implied volatility is the amount of future movement an option’s price has baked in.
+  <b>Vega</b> is how much the option’s value changes when that expectation moves by one point.
+  Before a known event — an earnings report above all — IV inflates, because everyone knows a jump
+  is coming. The moment the news is out, the uncertainty is gone and IV collapses. That collapse is
+  the <b>IV crush</b>, and it can sink an option trade even when the stock moves your way.</p>
+
+  <div class="card chart-card">
+    <p class="chart-title">An earnings night: straddle value before vs. after the crush</p>
+    <p class="chart-sub">Buy the $100 straddle the night before the report · overnight, IV deflates and one day passes</p>
+    <div class="controls">
+      <div class="ctl"><label for="vegaIVb">IV the night before</label>
+        <input type="range" id="vegaIVb" min="20" max="120" step="5" value="60">
+        <output id="vegaIVbOut"></output>
+      </div>
+      <div class="ctl"><label for="vegaIVa">IV the morning after</label>
+        <input type="range" id="vegaIVa" min="10" max="100" step="5" value="35">
+        <output id="vegaIVaOut"></output>
+      </div>
+      <div class="ctl"><label for="vegaDTE">Days to expiry at entry</label>
+        <input type="range" id="vegaDTE" min="2" max="45" step="1" value="14">
+        <output id="vegaDTEOut"></output>
+      </div>
+    </div>
+    <div class="chart" id="vegaChart"></div>
+    <div class="tiles">
+      <div class="tile"><div class="t-label">Straddle cost, night before</div><div class="t-value" id="vegaCost">—</div><div class="t-note">per share, at the inflated IV</div></div>
+      <div class="tile"><div class="t-label">P/L if the stock opens flat</div><div class="t-value" id="vegaFlat">—</div><div class="t-note" id="vegaFlatNote">per share — nothing happened, you still lost</div></div>
+      <div class="tile"><div class="t-label">Overnight move just to break even</div><div class="t-value" id="vegaMove">—</div><div class="t-note">the report must beat this before you earn a cent</div></div>
+    </div>
+    <p class="tryit"><b>Try it:</b> with the defaults (14 days, IV 60% → 35%), a completely flat
+    open vaporizes roughly <b>40%</b> of the straddle overnight — and the stock needs a mid-single-digit
+    percent jump just to get back to even. Now drag “IV the morning after” up to match the night-before
+    level: the trap almost disappears. The straddle buyer’s real bet is not “the stock will move” —
+    it is “the stock will move <i>more than the inflated IV already promised</i>”. This is exactly why
+    the 📣 vol-buyer case in the <a href="#history">Time machine</a> playbook loses so often.</p>
+  </div>
+
+  <div class="callout"><span class="kicker">Key idea</span>
+  <p>Delta and gamma are about the <i>stock price</i>; theta is about the <i>calendar</i>; vega is
+  about the <i>market’s fear itself</i>. Option sellers are short all that fear — which is why a
+  volatility spike (section 9’s negative-GEX world) hurts them twice: the stock runs <i>and</i> IV
+  explodes.</p></div>
+</section>
+
+<!-- ================= 7. DEALERS & DELTA HEDGING ================= -->
+<section id="s7">
+  <h2><span class="num">7</span>Dealers: the hedging machine on the other side</h2>
   <p>When you buy a call, someone sells it — usually a <b>market maker (dealer)</b> whose job is
   to earn the bid–ask spread, not to bet on direction. So the dealer immediately hedges:</p>
 
@@ -462,9 +547,9 @@ sliders and watch the curves respond.</p>
   options that exist. That sum is <b>GEX</b>.</p></div>
 </section>
 
-<!-- ================= 6. GEX ================= -->
-<section id="s6">
-  <h2><span class="num">6</span>GEX: gamma exposure, added up</h2>
+<!-- ================= 8. GEX ================= -->
+<section id="s8">
+  <h2><span class="num">8</span>GEX: gamma exposure, added up</h2>
   <p><b>GEX (gamma exposure)</b> estimates, for every strike, how many dollars of stock dealers must
   trade per 1% market move, given the <b>open interest</b> (contracts outstanding) at that strike.
   One problem: nobody publishes which side dealers are actually on. So the standard quick estimate
@@ -509,9 +594,9 @@ sliders and watch the curves respond.</p>
   begets selling, and volatility expands. That’s why the flip level is watched like a tripwire.</p></div>
 </section>
 
-<!-- ================= 7. REGIMES SIMULATION ================= -->
-<section id="s7">
-  <h2><span class="num">7</span>See it: the same market in two regimes</h2>
+<!-- ================= 9. REGIMES SIMULATION ================= -->
+<section id="s9">
+  <h2><span class="num">9</span>See it: the same market in two regimes</h2>
   <p>Here is a toy simulation. All three paths get the <b>identical sequence of random news
   shocks</b>. The only difference is the hedging feedback: in the positive-GEX world, dealers trade
   <i>against</i> each move and absorb part of it; in the negative-GEX world they <i>chase</i> each
@@ -542,9 +627,9 @@ sliders and watch the curves respond.</p>
   </div>
 </section>
 
-<!-- ================= 8. IN THE WILD ================= -->
-<section id="s8">
-  <h2><span class="num">8</span>Where you’ve seen this in the wild</h2>
+<!-- ================= 10. IN THE WILD ================= -->
+<section id="s10">
+  <h2><span class="num">10</span>Where you’ve seen this in the wild</h2>
 
   <div class="card">
     <h3>🚀 The gamma squeeze (GameStop, January 2021)</h3>
@@ -574,7 +659,7 @@ sliders and watch the curves respond.</p>
     <h3>🗺️ Where people watch this</h3>
     <p>Several research services publish daily GEX estimates and gamma-flip levels for indexes and
     single stocks (e.g. SqueezeMetrics’ GEX, SpotGamma, Menthor Q, and free community dashboards).
-    They all rest on the same naive dealer-positioning assumption from section 6 — useful as a map,
+    They all rest on the same naive dealer-positioning assumption from section 8 — useful as a map,
     not as gospel.</p>
   </div>
 </section>
@@ -594,6 +679,8 @@ sliders and watch the curves respond.</p>
     <dt>Delta</dt><dd>Option price change per $1 stock move; the option’s share-equivalent.</dd>
     <dt>Gamma</dt><dd>Delta’s change per $1 stock move; how fast a hedge goes stale.</dd>
     <dt>Theta</dt><dd>Daily decay of an option’s time value.</dd>
+    <dt>Vega</dt><dd>Option price change per 1-point change in implied volatility.</dd>
+    <dt>IV crush</dt><dd>The collapse of implied volatility right after a known event (like earnings) — option prices deflate even if the stock barely moves.</dd>
     <dt>Market maker / dealer</dt><dd>The professional counterparty on most option trades; hedges rather than bets.</dd>
     <dt>Delta hedging</dt><dd>Holding delta × 100 shares per contract to neutralize direction.</dd>
     <dt>Open interest (OI)</dt><dd>Number of contracts outstanding at a strike.</dd>
@@ -695,7 +782,8 @@ sliders and watch the curves respond.</p>
   <p>Quotes are real but <b>delayed</b> Cboe mid prices from the snapshot date shown above — not
   live, and you’d actually trade at bid or ask, not mid. The “today” curve re-prices the option
   with Black–Scholes (r&nbsp;=&nbsp;0) holding the option’s listed IV constant; in reality IV moves
-  too (that’s vega), especially in a squeeze. Educational only, not investment advice.</p></div>
+  too (that’s vega — <a href="#s6">§6 in the Guide</a>), especially in a squeeze. Educational only,
+  not investment advice.</p></div>
 </main>
 
 <main id="tab-strategies" hidden>
@@ -792,7 +880,8 @@ sliders and watch the curves respond.</p>
   <div class="callout"><span class="kicker">Honest caveats</span>
   <p>Every leg is filled at the <b>mid</b> of delayed quotes — real multi-leg orders cross several
   bid–ask spreads, so actual fills are worse, especially on four-leg trades. The "today" curve holds
-  each leg's listed IV constant (no vega, no skew shift); early assignment on short American-style
+  each leg's listed IV constant (no vega — <a href="#s6">§6 in the Guide</a> — and no skew shift);
+  early assignment on short American-style
   legs and margin requirements are ignored. Educational only, not investment advice.</p></div>
 </main>
 
@@ -1545,7 +1634,92 @@ function renderGamma() {
 }
 
 /* ================================================================
-   Section 5 — dealer hedge ladder
+   Section 5 — theta: time value melting toward expiry
+   ================================================================ */
+const thetaState = { iv: 0.25 };
+const THETA_T = 60;   // days on the x axis
+function renderTheta() {
+  const T = tokens();
+  const iv = thetaState.iv;
+  document.getElementById("thetaIVOut").textContent = Math.round(iv * 100) + "%";
+  const xs = []; for (let d = 0; d <= THETA_T; d += 0.5) xs.push(d);
+  /* stock parked at $100; OTM calls have zero intrinsic, so value = time value */
+  const val = (K, d) => bs(100, K, (THETA_T - d) / 365, iv).call;
+  const opts = [
+    { K: 100, name: "At the money ($100)", color: T.s1 },
+    { K: 105, name: "5% OTM ($105)",  color: T.s2 },
+    { K: 110, name: "10% OTM ($110)", color: T.s3 }
+  ];
+  const series = opts.map(o => ({ name: o.name, color: o.color,
+    values: xs.map(d => val(o.K, d)) }));
+  document.getElementById("thetaV60").textContent = fmt$2(val(100, 0));
+  document.getElementById("thetaV30").textContent = fmt$2(val(100, THETA_T - 30));
+  document.getElementById("thetaV7").textContent  = fmt$2(val(100, THETA_T - 7));
+  renderLineChart(document.getElementById("thetaChart"), {
+    height: 300, xDomain: [0, THETA_T], yDomain: [0, Math.max(1, series[0].values[0] * 1.15)], xs,
+    series, xTicks: [0, 10, 20, 30, 40, 50, 60],
+    fmtX: v => (THETA_T - v) + "d", ttFmtX: v => Math.round(THETA_T - v) + " days to expiry",
+    fmtY: fmt$, ttFmtY: fmt$2,
+    xLabel: "Days to expiry (time flows →)", yLabel: "Time value per share",
+    ariaLabel: "Option time value melting as expiry approaches",
+    annotations: [{ type: "vline", x: THETA_T - 7, label: "last week" }]
+  });
+}
+document.getElementById("thetaIV").addEventListener("input", e => { thetaState.iv = +e.target.value / 100; renderTheta(); });
+
+/* ================================================================
+   Section 6 — vega & the earnings IV crush
+   ================================================================ */
+const vegaState = { ivb: 0.60, iva: 0.35, dte: 14 };
+function straddleVal(S, Tyr, iv) { const v = bs(S, 100, Tyr, iv); return v.call + v.put; }
+function renderVega() {
+  const T = tokens();
+  const { ivb, iva, dte } = vegaState;
+  document.getElementById("vegaIVbOut").textContent = Math.round(ivb * 100) + "%";
+  document.getElementById("vegaIVaOut").textContent = Math.round(iva * 100) + "%";
+  document.getElementById("vegaDTEOut").textContent = dte + " days";
+  const cost = straddleVal(100, dte / 365, ivb);
+  const T2 = Math.max(0.25, dte - 1) / 365;   // one night passes
+  const after = S => straddleVal(S, T2, iva);
+  const flat = after(100) - cost;
+  document.getElementById("vegaCost").textContent = fmt$2(cost);
+  tileSign("vegaFlat", fmt$2(flat), flat);
+  document.getElementById("vegaFlatNote").textContent = flat < 0
+    ? "per share (" + Math.abs(flat / cost * 100).toFixed(0) + "% gone) — nothing happened, you still lost"
+    : "per share — no crush, no trap";
+  let move = null;
+  for (let S = 100; S <= 180; S += 0.05) { if (after(S) >= cost) { move = S - 100; break; } }
+  document.getElementById("vegaMove").textContent =
+    move === null ? "> ±80%" : move < 0.05 ? "none" : "±" + move.toFixed(1) + "%";
+  const xs = []; for (let s = 80; s <= 120; s += 0.25) xs.push(s);
+  renderLineChart(document.getElementById("vegaChart"), {
+    height: 300, xDomain: [80, 120],
+    yDomain: [0, Math.max(cost * 1.6, 22)], xs,
+    series: [
+      { name: "Night before (IV " + Math.round(ivb * 100) + "%)", color: T.s1,
+        values: xs.map(S => straddleVal(S, dte / 365, ivb)) },
+      { name: "Morning after (IV " + Math.round(iva * 100) + "%)", color: T.s3,
+        values: xs.map(after) },
+      { name: "At expiry (intrinsic)", color: T.muted, dash: "4 4",
+        values: xs.map(S => Math.abs(S - 100)) }
+    ],
+    fmtX: v => "$" + v, fmtY: fmt$, ttFmtY: fmt$2,
+    xLabel: "Stock price", yLabel: "Straddle value per share",
+    ariaLabel: "Straddle value before and after the earnings IV crush",
+    annotations: [
+      { type: "vline", x: 100, label: "strike $100" },
+      { type: "hline", y: cost, label: "what you paid" }
+    ]
+  });
+}
+for (const [id, key, scale] of [["vegaIVb", "ivb", 100], ["vegaIVa", "iva", 100], ["vegaDTE", "dte", 1]]) {
+  document.getElementById(id).addEventListener("input", e => {
+    vegaState[key] = +e.target.value / scale; renderVega();
+  });
+}
+
+/* ================================================================
+   Section 7 — dealer hedge ladder
    ================================================================ */
 const hedgeState = { spot: 100 };
 const HEDGE = { K: 100, T: 30 / 365, iv: 0.25, contracts: 10 }; // dealer short 10 calls
@@ -1577,7 +1751,7 @@ function renderHedge() {
 document.getElementById("hedgeSpot").addEventListener("input", e => { hedgeState.spot = +e.target.value; renderHedge(); });
 
 /* ================================================================
-   Section 6 — GEX by strike
+   Section 8 — GEX by strike
    ================================================================ */
 /* Fixed synthetic open interest (contracts) — calls cluster above spot,
    puts below, round-number strikes get extra weight. */
@@ -1658,7 +1832,7 @@ segWire("gexMode", "mode", gexState, renderGex);
 document.getElementById("gexSpot").addEventListener("input", e => { gexState.spot = +e.target.value; renderGex(); });
 
 /* ================================================================
-   Section 7 — regime simulation
+   Section 9 — regime simulation
    ================================================================ */
 const simState = { k: 0.45, seed: 7 };
 function mulberry32(a) {
@@ -1930,7 +2104,7 @@ const STRATEGIES = {
       " an out-of-the-money call spread. You collect both credits; expire anywhere between the two" +
       " short strikes and you keep everything, while the long wings cap the worst case. The classic" +
       " “income from time decay” trade.</p><p><b>Gamma lens:</b> a condor seller is short" +
-      " gamma on both sides — the friend of the calm positive-GEX regime from §7, and the first" +
+      " gamma on both sides — the friend of the calm positive-GEX regime from §9, and the first" +
       " casualty of a gamma squeeze. When people say “volatility sellers got run over”," +
       " this is usually the position they mean.</p>"
   },
@@ -1979,7 +2153,7 @@ const STRATEGIES = {
       " above the market. The premium is yours no matter what; in exchange you hand over any upside" +
       " past the short strike. Stall = the premium is income; rocket = you still profit, just" +
       " capped.</p><p><b>Gamma lens:</b> covered-call sellers are the “typical customer”" +
-      " the naive GEX model of §6 assumes. They supply the calls, dealers end up long them — which" +
+      " the naive GEX model of §8 assumes. They supply the calls, dealers end up long them — which" +
       " is why call gamma above the market usually counts as stabilizing.</p>"
   },
   "protective-put": {
@@ -1988,7 +2162,7 @@ const STRATEGIES = {
     why: "<p><b>The bet: keep the upside, insure the downside.</b> Own 100 shares, buy a put below" +
       " the market. It is an insurance policy — premium = the price, distance to the strike = the" +
       " deductible. Losses stop at the put strike however far the stock falls; the cost is a quiet" +
-      " drag on returns in calm times.</p><p><b>Gamma lens:</b> the other half of §6's naive model:" +
+      " drag on returns in calm times.</p><p><b>Gamma lens:</b> the other half of §8's naive model:" +
       " customers buy protective puts, so dealers sit short them — negative gamma below the market," +
       " which is why sell-offs often accelerate once they reach put-heavy strikes.</p>"
   }
@@ -2738,12 +2912,18 @@ tabBar.querySelectorAll("button").forEach(b => b.addEventListener("click", () =>
 window.addEventListener("hashchange", () => {
   const name = HASH2TAB[location.hash] || "guide";
   showTab(name);
-  if (name !== "guide" || location.hash === "" || location.hash === "#guide") window.scrollTo(0, 0);
+  /* cross-tab anchor (e.g. #s6 clicked from another tab): the target was hidden
+     when the browser tried its native scroll, so scroll to it ourselves */
+  const target = name === "guide" && location.hash.length > 1
+    ? document.getElementById(location.hash.slice(1)) : null;
+  if (target) target.scrollIntoView();
+  else window.scrollTo(0, 0);
 });
 
 function renderAll() {
   if (!tabEls.guide.hidden) {
     renderPayoff(); renderValue(); renderDelta(); renderGamma();
+    renderTheta(); renderVega();
     renderHedge(); renderGex(); renderSim();
   }
   if (!tabEls.playground.hidden) renderPlayground();

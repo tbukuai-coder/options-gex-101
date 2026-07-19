@@ -5,7 +5,7 @@ options work and how option **dealer hedging** feeds back into the stock market 
 delta, gamma, **GEX (gamma exposure)**, the gamma flip, gamma squeezes, OPEX pinning,
 and the 0DTE era. Four tabs:
 
-- **📖 Guide** — the eight-section interactive course (all data synthetic).
+- **📖 Guide** — the ten-section interactive course (all data synthetic).
 - **🧪 Playground** — build a real position from real (delayed) option chains: pick
   NVDA / TSLA / AAPL / MSFT / AMD / SPY, a listed expiry and strike, buy or sell a
   call or put, and see total P/L vs. stock price — both "if it jumps there today"
@@ -77,10 +77,12 @@ estimates premiums with Black–Scholes from trailing 3-month realized volatilit
 | 2 | Price before expiry | Black–Scholes value vs. intrinsic; IV + DTE sliders (see theta melt the curve onto the kink) |
 | 3 | Delta | Call/put delta curves; DTE slider steepens them into a step |
 | 4 | Gamma | Gamma vs. spot at 30/7/1 DTE — the 0DTE spike |
-| 5 | Dealers & delta hedging | Flow diagram + hedge-ladder chart with "if price moves $2, dealer must trade N shares" tiles |
-| 6 | GEX | Diverging bar chart of dealer gamma by strike (synthetic OI, naive long-calls/short-puts convention), spot slider, net view, gamma-flip estimate, data table |
-| 7 | Market regimes | Seeded simulation: identical shocks through positive-GEX (dampened) vs. negative-GEX (amplified) hedging feedback, with realized-vol tiles |
-| 8 | In the wild | GameStop gamma squeeze, OPEX pinning, 0DTE, where GEX dashboards live |
+| 5 | Theta | Time value melting toward expiry: ATM vs 5%/10% OTM calls, IV slider, √T tiles (60d/30d/7d) |
+| 6 | Vega & IV crush | Earnings-night straddle: value before vs after the overnight IV drop, cost line, flat-open loss + breakeven-move tiles, IV-before/after/DTE sliders |
+| 7 | Dealers & delta hedging | Flow diagram + hedge-ladder chart with "if price moves $2, dealer must trade N shares" tiles |
+| 8 | GEX | Diverging bar chart of dealer gamma by strike (synthetic OI, naive long-calls/short-puts convention), spot slider, net view, gamma-flip estimate, data table |
+| 9 | Market regimes | Seeded simulation: identical shocks through positive-GEX (dampened) vs. negative-GEX (amplified) hedging feedback, with realized-vol tiles |
+| 10 | In the wild | GameStop gamma squeeze, OPEX pinning, 0DTE, where GEX dashboards live |
 | — | Glossary + caveats | Every term used, plus an honest list of the model's simplifications |
 | 🧪 | Playground tab | Real-chain position builder: ticker/expiry/strike selectors, buy/sell × call/put, contracts, P/L-today + P/L-at-expiry chart, what-if slider |
 | 🦋 | Strategies tab | Multi-leg strategy lab: 9 recipes on real chains, leg chips, debit/credit, breakevens, max P/L, net delta/gamma tiles, per-strategy explainers |

@@ -2,8 +2,9 @@
 
 Prioritized backlog. Items are ordered by (impact on the site's teaching mission) ×
 (feasibility with the current zero-dependency, snapshot-data architecture).
-Done so far: Guide (8 sections), Playground, Strategies lab (9 recipes on real chains),
-Time machine (single + multi-leg on real history, earnings-season playbook).
+Done so far: Guide (10 sections, incl. theta & vega/IV-crush added 2026-07-19),
+Playground, Strategies lab (9 recipes on real chains), Time machine (single +
+multi-leg on real history, earnings-season playbook).
 
 ## 1 · Real GEX dashboard from real chains ⭐ the namesake feature
 
@@ -28,42 +29,34 @@ that actually crushes). Change: after the entry/report day, decay sigma back to 
 unmarked realized-vol estimate (e.g. drop the markup entirely on day 1, or over 2–3
 days). Small change in `renderTimeMachine`'s path loop; disclose in the caveat box.
 
-## 3 · Guide sections for the missing Greeks: theta & vega
+## 3 · IV smile / skew chart from the real chains
 
-The course jumps delta → gamma → dealers. Two short sections would complete it:
-- **Theta**: time-value decay curve vs DTE (the §2 chart already almost shows this);
-  "who earns theta" ties into why anyone sells condors.
-- **Vega + IV crush**: option value vs IV slider at fixed spot; an earnings-day
-  animation (IV 60% → 35% overnight) explains why bought straddles lose on flat opens.
-  Cross-link from the Strategies lab caveat and the playbook notes.
+`data.js` already has per-strike IV. A small chart (Playground, or a Guide subsection
+after §8 GEX) plotting IV vs strike for a chosen ticker/expiry shows put skew in real
+data — and connects it to the GEX story (the market pays up for crash protection;
+dealers are short those puts). Zero new data needed. Pairs naturally with the new §6
+vega section.
 
-## 4 · IV smile / skew chart from the real chains
-
-`data.js` already has per-strike IV. A small chart (Playground or a §6.5) plotting IV
-vs strike for a chosen ticker/expiry shows put skew in real data — and connects it to
-the GEX story (the market pays up for crash protection; dealers are short those puts).
-Zero new data needed.
-
-## 5 · Strategy comparison overlay in the lab
+## 4 · Strategy comparison overlay in the lab
 
 "Compare with…" second-strategy selector that draws its at-expiry P/L as a dashed
 series on the same chart (same center/width where applicable). The butterfly-vs-iron-
 butterfly and straddle-vs-strangle comparisons are the classic teaching pairs; the
 tryit copy already tells users to flip back and forth — show both at once instead.
 
-## 6 · Time machine scoreboard
+## 5 · Time machine scoreboard
 
 localStorage running tally (like brain-trainer bests): reveals played, hit rate, total
 P/L, best/worst trade, per-strategy breakdown. Turns "deal a few of each — the lesson
 is in the distribution" into an actual measured distribution.
 
-## 7 · Shareable position links
+## 6 · Shareable position links
 
 Hash-encode tab + position (ticker/expiry/strategy/strikes/side), like
 portfolio-backtest's `#p=` links. Lets the user send "look at this butterfly" URLs.
 Cheap: all state is already in small plain objects (`pg`, `st`, `tm`).
 
-## 8 · Quiz mode (stretch)
+## 7 · Quiz mode (stretch)
 
 A ~10-question check ("dealers short gamma means hedging goes __ the move?", read a
 GEX chart, pick the breakeven) gating a "course complete" badge — same step-player
