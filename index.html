@@ -246,6 +246,7 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 40px 0; }
   <div class="tabs" id="tabBar" role="tablist" aria-label="Site sections">
     <button aria-pressed="true" data-tab="guide">📖 Guide</button>
     <button aria-pressed="false" data-tab="playground">🧪 Playground</button>
+    <button aria-pressed="false" data-tab="history">⏳ Time machine</button>
   </div>
   <button class="plain" id="themeToggle" aria-label="Toggle color theme">◐ Theme</button>
 </header>
@@ -674,6 +675,96 @@ sliders and watch the curves respond.</p>
   too (that’s vega), especially in a squeeze. Educational only, not investment advice.</p></div>
 </main>
 
+<main id="tab-history" hidden>
+  <h1>Time machine — trade a real moment from the past</h1>
+  <p class="lead">Jump to a random <b>real historical day</b> — for example an actual NVDA earnings
+  report date — see only the price chart <i>up to that day</i>, place an option trade, then hit
+  reveal and watch what really happened to the stock and to your P/L.</p>
+
+  <div class="card chart-card">
+    <p class="chart-title">1 · Get a moment in history</p>
+    <div class="controls">
+      <div class="ctl"><label>Stock</label>
+        <div class="seg" id="tmTicker" role="group" aria-label="Ticker">
+          <button aria-pressed="true" data-v="NVDA">NVDA</button>
+          <button aria-pressed="false" data-v="TSLA">TSLA</button>
+          <button aria-pressed="false" data-v="AAPL">AAPL</button>
+          <button aria-pressed="false" data-v="MSFT">MSFT</button>
+          <button aria-pressed="false" data-v="AMD">AMD</button>
+          <button aria-pressed="false" data-v="SPY">SPY</button>
+        </div>
+      </div>
+      <div class="ctl"><label>Kind of day</label>
+        <div class="seg" id="tmMode" role="group" aria-label="Scenario type">
+          <button aria-pressed="true" data-v="earnings">Earnings day</button>
+          <button aria-pressed="false" data-v="random">Random day</button>
+        </div>
+      </div>
+      <div class="ctl"><label>&nbsp;</label>
+        <button class="plain" id="tmNew">🎲 New scenario</button>
+      </div>
+    </div>
+    <p class="chart-sub" id="tmStatus"></p>
+
+    <p class="chart-title">2 · Build your trade</p>
+    <div class="controls" id="tmPosControls">
+      <div class="ctl"><label>Option type</label>
+        <div class="seg" id="tmType" role="group" aria-label="Call or put">
+          <button aria-pressed="true" data-v="call">Call</button>
+          <button aria-pressed="false" data-v="put">Put</button>
+        </div>
+      </div>
+      <div class="ctl"><label>Your side</label>
+        <div class="seg" id="tmSide" role="group" aria-label="Buy or sell">
+          <button aria-pressed="true" data-v="buy">Buy</button>
+          <button aria-pressed="false" data-v="sell">Sell</button>
+        </div>
+      </div>
+      <div class="ctl"><label for="tmMoney">Strike</label>
+        <select id="tmMoney"></select>
+      </div>
+      <div class="ctl"><label for="tmExpOff">Expiry</label>
+        <select id="tmExpOff"></select>
+      </div>
+      <div class="ctl"><label for="tmN">Contracts</label>
+        <input type="number" id="tmN" min="1" max="1000" step="1" value="1">
+      </div>
+    </div>
+
+    <div class="tiles">
+      <div class="tile"><div class="t-label">Estimated premium</div><div class="t-value" id="tmPrem">—</div><div class="t-note" id="tmPremNote"></div></div>
+      <div class="tile"><div class="t-label">Breakeven at expiry</div><div class="t-value" id="tmBE">—</div><div class="t-note" id="tmBENote"></div></div>
+      <div class="tile"><div class="t-label">Expiry date</div><div class="t-value" id="tmExpDate">—</div><div class="t-note" id="tmExpNote"></div></div>
+    </div>
+
+    <div class="chart" id="tmPriceChart"></div>
+
+    <div style="text-align:center; margin:16px 0 6px">
+      <button class="plain" id="tmReveal" style="font-size:16px; padding:10px 28px; font-weight:600">▶ Reveal what happened</button>
+    </div>
+
+    <div id="tmResults" hidden>
+      <h3 id="tmVerdict"></h3>
+      <div class="chart" id="tmPLChart"></div>
+      <div class="tiles">
+        <div class="tile"><div class="t-label">The stock</div><div class="t-value" id="tmStockMove">—</div><div class="t-note" id="tmStockNote"></div></div>
+        <div class="tile"><div class="t-label">Your option P/L</div><div class="t-value" id="tmPL">—</div><div class="t-note" id="tmPLNote"></div></div>
+        <div class="tile"><div class="t-label">Return on premium</div><div class="t-value" id="tmRet">—</div><div class="t-note" id="tmRetNote"></div></div>
+        <div class="tile"><div class="t-label">Same money in shares</div><div class="t-value" id="tmVs">—</div><div class="t-note" id="tmVsNote"></div></div>
+      </div>
+      <p class="tryit"><b>Notice:</b> options turn small stock moves into big percentage wins and
+      losses — and being right about <i>direction</i> isn’t enough, you also have to beat the
+      premium before expiry. Hit 🎲 for another moment in history.</p>
+    </div>
+  </div>
+
+  <div class="callout"><span class="kicker">How the premium is estimated</span>
+  <p>There is no free archive of historical option prices, so the premium is <b>estimated</b> with
+  Black–Scholes from the stock’s realized volatility over the prior 3 months — with a +35% markup
+  on earnings scenarios, since options are always pricier before a report. Real premiums differed,
+  sometimes a lot. The stock prices and earnings dates themselves are real (split-adjusted).</p></div>
+</main>
+
 <footer class="site">
   Built as one HTML file plus a real option-chain snapshot (<code>data.js</code>, delayed Cboe
   quotes refreshed by <code>refresh_data.py</code>). All pricing math runs in your browser with the
@@ -681,6 +772,7 @@ sliders and watch the curves respond.</p>
 </footer>
 
 <script src="data.js"></script>
+<script src="hist.js"></script>
 <script>
 "use strict";
 /* ================================================================
@@ -866,9 +958,19 @@ function renderLineChart(container, cfg) {
      status green above zero, status red below (drawn under the lines) */
   if (cfg.plFill != null && y0 < 0 && y1 > 0) {
     const vals = cfg.series[cfg.plFill].values;
-    let area = "M" + sx(cfg.xs[0]).toFixed(1) + " " + sy(0).toFixed(1);
-    vals.forEach((v, i) => { area += "L" + sx(cfg.xs[i]).toFixed(1) + " " + sy(v).toFixed(1); });
-    area += "L" + sx(cfg.xs[cfg.xs.length - 1]).toFixed(1) + " " + sy(0).toFixed(1) + "Z";
+    let area = "", open = false, lastX = null;
+    const zy = sy(0).toFixed(1);
+    vals.forEach((v, i) => {
+      if (!isFinite(v)) {
+        if (open) { area += "L" + lastX + " " + zy + "Z"; open = false; }
+        return;
+      }
+      const X = sx(cfg.xs[i]).toFixed(1);
+      if (!open) { area += "M" + X + " " + zy; open = true; }
+      area += "L" + X + " " + sy(v).toFixed(1);
+      lastX = X;
+    });
+    if (open) area += "L" + lastX + " " + zy + "Z";
     const cpPos = el("clipPath", { id: "clip-pos-" + container.id }, svg);
     el("rect", { x: M.l, y: M.t, width: iw, height: Math.max(0, sy(0) - M.t) }, cpPos);
     const cpNeg = el("clipPath", { id: "clip-neg-" + container.id }, svg);
@@ -883,9 +985,11 @@ function renderLineChart(container, cfg) {
   const clip = el("clipPath", { id: "clip-" + container.id }, svg);
   el("rect", { x: M.l, y: M.t - 6, width: iw, height: ih + 6 }, clip);
   for (const s of cfg.series) {
-    let d = "";
+    let d = "", pen = false;
     s.values.forEach((v, i) => {
-      d += (i === 0 ? "M" : "L") + sx(cfg.xs[i]).toFixed(1) + " " + sy(v).toFixed(1);
+      if (!isFinite(v)) { pen = false; return; }
+      d += (pen ? "L" : "M") + sx(cfg.xs[i]).toFixed(1) + " " + sy(v).toFixed(1);
+      pen = true;
     });
     el("path", { d, fill: "none", stroke: s.color, "stroke-width": s.width || 2,
       "stroke-linejoin": "round", "stroke-linecap": "round",
@@ -902,6 +1006,14 @@ function renderLineChart(container, cfg) {
       if (a.label) {
         const ly = a.labelPos === "bottom" ? M.t + ih - 6 : M.t - 2;
         const lb = el("text", { x: sx(a.x), y: ly, "text-anchor": "middle",
+          "font-size": 11, fill: T.ink2, "font-weight": 600, ...halo }, svg);
+        lb.textContent = a.label;
+      }
+    } else if (a.type === "hline") {
+      el("line", { x1: M.l, x2: M.l + iw, y1: sy(a.y), y2: sy(a.y),
+        stroke: T.muted, "stroke-width": 1 }, svg);
+      if (a.label) {
+        const lb = el("text", { x: M.l + iw - 4, y: sy(a.y) - 5, "text-anchor": "end",
           "font-size": 11, fill: T.ink2, "font-weight": 600, ...halo }, svg);
         lb.textContent = a.label;
       }
@@ -945,6 +1057,7 @@ function renderLineChart(container, cfg) {
     tip.appendChild(xr);
     cfg.series.forEach((s, si) => {
       const v = s.values[idx];
+      if (!isFinite(v)) { dots[si].setAttribute("opacity", 0); return; }
       dots[si].setAttribute("cx", px); dots[si].setAttribute("cy", sy(v));
       dots[si].setAttribute("opacity", 1);
       const row = document.createElement("div"); row.className = "tt-row";
@@ -1614,29 +1727,273 @@ if (CHAIN) {
 }
 
 /* ================================================================
+   Time machine — real historical scenarios (from hist.js)
+   ================================================================ */
+const HIST = typeof HIST_DATA !== "undefined" ? HIST_DATA : null;
+const TM_LOOKBACK = 120;                 // trading days of history shown
+const TM_EXP_OFFS = [10, 21, 42, 63];    // trading-day expiry choices
+const TM_EXP_NAMES = { 10: "≈2 weeks", 21: "≈1 month", 42: "≈2 months", 63: "≈3 months" };
+const TM_MONEYS = [-10, -5, 0, 5, 10];   // strike % vs entry price
+const tm = { tk: "NVDA", mode: "earnings", type: "call", side: "buy",
+             money: 0, expOff: 21, n: 1, spyNote: false,
+             entryIdx: null, revealed: false, done: false, prog: 0, timer: null };
+let tmDateIdx = null;
+
+function tileSign(id, text, v) {
+  const e2 = document.getElementById(id);
+  e2.textContent = text;
+  e2.classList.toggle("pos", v > 0);
+  e2.classList.toggle("neg", v < 0);
+}
+function tmClose(i) { return HIST.tickers[tm.tk].closes[i]; }
+function tmFmtDate(iso, opts) {
+  return new Date(iso + "T12:00:00").toLocaleDateString("en-US",
+    opts || { month: "short", day: "numeric", year: "numeric" });
+}
+function tmRoundStrike(v) {
+  const inc = v < 25 ? 0.5 : v < 100 ? 1 : v < 250 ? 2.5 : 5;
+  return Math.round(Math.round(v / inc) * inc * 100) / 100;
+}
+function tmSigma() {   /* realized vol over ~3 months before entry, annualized */
+  const c = HIST.tickers[tm.tk].closes;
+  const i0 = Math.max(1, tm.entryIdx - 62);
+  const rs = [];
+  for (let i = i0; i <= tm.entryIdx; i++) rs.push(Math.log(c[i] / c[i - 1]));
+  const m = rs.reduce((a, b) => a + b, 0) / rs.length;
+  const va = rs.reduce((a, b) => a + (b - m) * (b - m), 0) / (rs.length - 1);
+  let s = Math.sqrt(va * 252);
+  if (tm.mode === "earnings") s *= 1.35;   /* disclosed pre-earnings markup */
+  return Math.max(0.1, Math.min(2, s));
+}
+function tmEarningsIdxs() {
+  const ds = HIST.dates, maxOff = Math.max(...TM_EXP_OFFS);
+  return HIST.tickers[tm.tk].earnings.map(e2 => {
+    if (tmDateIdx.has(e2)) return tmDateIdx.get(e2);
+    const i = ds.findIndex(d => d > e2);      /* report on a non-trading day */
+    return i <= 0 ? -1 : i - 1;
+  }).filter(i => i >= TM_LOOKBACK && i + maxOff < ds.length);
+}
+function tmPick() {
+  clearInterval(tm.timer); tm.timer = null;
+  tm.revealed = false; tm.done = false; tm.prog = 0; tm.spyNote = false;
+  if (tm.mode === "earnings" && !HIST.tickers[tm.tk].earnings.length) {
+    tm.mode = "random"; tm.spyNote = true;
+    document.querySelectorAll("#tmMode button").forEach(b =>
+      b.setAttribute("aria-pressed", String(b.dataset.v === "random")));
+  }
+  const ds = HIST.dates;
+  const pool = tm.mode === "earnings" ? tmEarningsIdxs() : null;
+  let idx;
+  if (pool && pool.length) {
+    do { idx = pool[Math.floor(Math.random() * pool.length)]; }
+    while (pool.length > 1 && idx === tm.entryIdx);
+  } else {
+    const lo = TM_LOOKBACK, hi = ds.length - 1 - Math.max(...TM_EXP_OFFS);
+    do { idx = lo + Math.floor(Math.random() * (hi - lo + 1)); }
+    while (idx === tm.entryIdx);
+  }
+  tm.entryIdx = idx;
+  tmFillSelects();
+}
+function tmFillSelects() {
+  const ds = HIST.dates, spot = tmClose(tm.entryIdx);
+  const mSel = document.getElementById("tmMoney");
+  mSel.textContent = "";
+  for (const m of TM_MONEYS) {
+    const o = document.createElement("option");
+    o.value = m;
+    const K = tmRoundStrike(spot * (1 + m / 100));
+    o.textContent = "$" + K + " · " + (m === 0 ? "at the money" : Math.abs(m) + "% " + (m > 0 ? "above" : "below"));
+    o.selected = m === tm.money;
+    mSel.appendChild(o);
+  }
+  const eSel = document.getElementById("tmExpOff");
+  eSel.textContent = "";
+  for (const off of TM_EXP_OFFS) {
+    const o = document.createElement("option");
+    o.value = off;
+    o.textContent = tmFmtDate(ds[tm.entryIdx + off], { month: "short", day: "numeric", year: "2-digit" }) +
+      " · " + TM_EXP_NAMES[off];
+    o.selected = off === tm.expOff;
+    eSel.appendChild(o);
+  }
+}
+
+function renderTimeMachine() {
+  const T = tokens();
+  const status = document.getElementById("tmStatus");
+  if (!HIST) { status.textContent = "hist.js not found — run build_history.py."; return; }
+  const ds = HIST.dates, e = tm.entryIdx;
+  const spot = tmClose(e);
+  const K = tmRoundStrike(spot * (1 + tm.money / 100));
+  const expIdx = e + tm.expOff;
+  const Tyr = (new Date(ds[expIdx]) - new Date(ds[e])) / 86400e3 / 365;
+  const sigma = tmSigma();
+  const isCall = tm.type === "call";
+  const v0 = bs(spot, K, Tyr, sigma);
+  const prem = Math.max(0.01, Math.round((isCall ? v0.call : v0.put) * 100) / 100);
+  const sign = tm.side === "buy" ? 1 : -1;
+  const mult = 100 * tm.n;
+  const premTotal = prem * mult;
+  const be = isCall ? K + prem : K - prem;
+
+  status.textContent = tm.tk + " on " + tmFmtDate(ds[e]) +
+    (tm.mode === "earnings" ? " — a real earnings report date" : " — a random trading day") +
+    " · price $" + spot.toFixed(2) + " · est. volatility " + Math.round(sigma * 100) + "%" +
+    (tm.spyNote ? " · SPY is an ETF (no earnings), random day used" : "");
+  document.getElementById("tmPrem").textContent = "$" + prem.toFixed(2);
+  document.getElementById("tmPremNote").textContent = "per share · you " +
+    (sign > 0 ? "pay " : "collect ") + fmtCompact$(premTotal) + " for " +
+    tm.n + (tm.n === 1 ? " contract" : " contracts");
+  document.getElementById("tmBE").textContent = "$" + be.toFixed(2);
+  document.getElementById("tmBENote").textContent = ((be - spot) / spot >= 0 ? "+" : "−") +
+    Math.abs((be - spot) / spot * 100).toFixed(1) + "% from entry";
+  document.getElementById("tmExpDate").textContent = tmFmtDate(ds[expIdx], { month: "short", day: "numeric", year: "numeric" });
+  document.getElementById("tmExpNote").textContent = tm.expOff + " trading days after entry";
+
+  /* price chart — the future stays blank until revealed */
+  const x0 = e - TM_LOOKBACK, x1 = expIdx;
+  const xs = []; for (let i = x0; i <= x1; i++) xs.push(i);
+  const showTo = tm.revealed ? Math.min(e + tm.prog, expIdx) : e;
+  const histVals = xs.map(i => i <= e ? tmClose(i) : NaN);
+  const futVals = xs.map(i => (i >= e && i <= showTo) ? tmClose(i) : NaN);
+  const vis = [];
+  for (let i = x0; i <= showTo; i++) vis.push(tmClose(i));
+  vis.push(K);
+  let lo = Math.min(...vis), hi = Math.max(...vis);
+  const pad = (hi - lo) * 0.08 || 1;
+  const series = [{ name: "Before your trade", color: T.s1, values: histVals }];
+  if (tm.revealed) series.push({ name: "What happened next", color: T.s3, values: futVals });
+  const fmtIdx = i => {
+    const j = Math.max(0, Math.min(ds.length - 1, Math.round(i)));
+    const d = new Date(ds[j] + "T12:00:00");
+    return d.toLocaleDateString("en-US", { month: "short" }) + " ’" + String(d.getFullYear()).slice(2);
+  };
+  renderLineChart(document.getElementById("tmPriceChart"), {
+    height: 320, xDomain: [x0, x1], yDomain: [lo - pad, hi + pad], xs, series,
+    fmtX: fmtIdx, ttFmtX: i => tmFmtDate(ds[Math.round(i)]),
+    fmtY: v => "$" + Math.round(v), ttFmtY: v => "$" + v.toFixed(2),
+    xLabel: "Date", yLabel: "Stock price",
+    ariaLabel: "Historical stock price around the scenario date",
+    annotations: [
+      { type: "vline", x: e, label: "you trade here" },
+      { type: "vline", x: expIdx, label: "expiry", labelPos: "bottom" },
+      { type: "hline", y: K, label: "strike $" + K }
+    ]
+  });
+
+  document.getElementById("tmReveal").hidden = tm.revealed;
+  document.getElementById("tmResults").hidden = !tm.revealed;
+  if (!tm.revealed) return;
+
+  /* P/L over the holding period (axis fixed to the full path so it doesn't jump) */
+  const optVal = (S, Trem) => { const v = bs(S, K, Math.max(0, Trem), sigma); return isCall ? v.call : v.put; };
+  const pAll = [], pxs = [];
+  for (let i = e; i <= expIdx; i++) {
+    const Trem = (new Date(ds[expIdx]) - new Date(ds[i])) / 86400e3 / 365;
+    pxs.push(i);
+    pAll.push(sign * (optVal(tmClose(i), Trem) - prem) * mult);
+  }
+  const pShow = pAll.map((v, j) => (e + j <= showTo ? v : NaN));
+  let plo = Math.min(...pAll, 0), phi = Math.max(...pAll, 0);
+  const ppad = (phi - plo) * 0.1 || 100;
+  const fmtIdxDay = i => {
+    const j = Math.max(0, Math.min(ds.length - 1, Math.round(i)));
+    return tmFmtDate(ds[j], { month: "short", day: "numeric" });
+  };
+  renderLineChart(document.getElementById("tmPLChart"), {
+    height: 250, xDomain: [e, expIdx], yDomain: [plo - ppad, phi + ppad], xs: pxs,
+    series: [{ name: "Position P/L", color: T.s1, values: pShow }],
+    plFill: 0, zeroLine: true,
+    fmtX: fmtIdxDay, ttFmtX: i => tmFmtDate(ds[Math.round(i)]),
+    fmtY: fmtCompact$, ttFmtY: fmtPL,
+    xLabel: "Date", yLabel: "P/L ($)",
+    ariaLabel: "Position profit and loss over the holding period"
+  });
+
+  const Send = tmClose(showTo);
+  const stockPct = (Send - spot) / spot * 100;
+  tileSign("tmStockMove", (stockPct >= 0 ? "+" : "−") + Math.abs(stockPct).toFixed(1) + "%", stockPct);
+  document.getElementById("tmStockNote").textContent = "$" + spot.toFixed(2) + " → $" + Send.toFixed(2);
+  const plCur = pAll[showTo - e];
+  tileSign("tmPL", fmtPL(plCur), plCur);
+  document.getElementById("tmPLNote").textContent = tm.done ? "held to expiry" : "so far…";
+  tileSign("tmRet", (plCur >= 0 ? "+" : "−") + Math.abs(plCur / premTotal * 100).toFixed(0) + "%", plCur);
+  document.getElementById("tmRetNote").textContent = "on the premium " + (sign > 0 ? "paid" : "collected");
+  const sharePL = premTotal / spot * (Send - spot);
+  tileSign("tmVs", fmtPL(sharePL), sharePL);
+  document.getElementById("tmVsNote").textContent = "if " + fmtCompact$(premTotal) + " had bought shares instead";
+  document.getElementById("tmVerdict").textContent = tm.done
+    ? tm.tk + " went " + (stockPct >= 0 ? "up " : "down ") + Math.abs(stockPct).toFixed(1) +
+      "% by expiry — your " + (tm.side === "buy" ? "long" : "short") + " " + tm.type + " " +
+      (plCur >= 0 ? "made " : "lost ") + fmtCompact$(Math.abs(plCur)) +
+      ". Change the trade above to see what a different position would have done."
+    : "Rolling history forward…";
+}
+function tmPosChanged() {
+  if (tm.revealed) {         /* after reveal: instant re-run, no animation */
+    clearInterval(tm.timer); tm.timer = null;
+    tm.prog = tm.expOff; tm.done = true;
+  }
+  renderTimeMachine();
+}
+if (HIST) {
+  tmDateIdx = new Map(HIST.dates.map((d, i) => [d, i]));
+  segWire("tmTicker", "tk", tm, () => { tmPick(); renderTimeMachine(); });
+  segWire("tmMode", "mode", tm, () => { tmPick(); renderTimeMachine(); });
+  document.getElementById("tmNew").addEventListener("click", () => { tmPick(); renderTimeMachine(); });
+  segWire("tmType", "type", tm, tmPosChanged);
+  segWire("tmSide", "side", tm, tmPosChanged);
+  document.getElementById("tmMoney").addEventListener("change", e2 => { tm.money = +e2.target.value; tmPosChanged(); });
+  document.getElementById("tmExpOff").addEventListener("change", e2 => { tm.expOff = +e2.target.value; tmPosChanged(); });
+  document.getElementById("tmN").addEventListener("input", e2 => {
+    tm.n = Math.max(1, Math.min(1000, Math.round(+e2.target.value || 1))); tmPosChanged();
+  });
+  document.getElementById("tmReveal").addEventListener("click", () => {
+    if (tm.revealed) return;
+    tm.revealed = true; tm.prog = 0;
+    const step = Math.ceil(tm.expOff / 25);
+    tm.timer = setInterval(() => {
+      tm.prog += step;
+      if (tm.prog >= tm.expOff) {
+        tm.prog = tm.expOff; tm.done = true;
+        clearInterval(tm.timer); tm.timer = null;
+      }
+      if (!tabEls.history.hidden) renderTimeMachine();
+    }, 80);
+    renderTimeMachine();
+  });
+  tmPick();
+}
+
+/* ================================================================
    tabs, then render everything; re-render on resize / theme change
    ================================================================ */
 const tabEls = {
   guide: document.getElementById("tab-guide"),
-  playground: document.getElementById("tab-playground")
+  playground: document.getElementById("tab-playground"),
+  history: document.getElementById("tab-history")
 };
 const tabBar = document.getElementById("tabBar");
-function currentTab() { return tabEls.playground.hidden ? "guide" : "playground"; }
+const HASH2TAB = { "#playground": "playground", "#history": "history" };
+function currentTab() {
+  for (const k in tabEls) if (!tabEls[k].hidden) return k;
+  return "guide";
+}
 function showTab(name) {
-  tabEls.guide.hidden = name !== "guide";
-  tabEls.playground.hidden = name !== "playground";
+  for (const k in tabEls) tabEls[k].hidden = k !== name;
   tabBar.querySelectorAll("button").forEach(b =>
     b.setAttribute("aria-pressed", String(b.dataset.tab === name)));
   renderAll();
 }
 tabBar.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
   if (b.dataset.tab === currentTab()) return;
-  location.hash = b.dataset.tab === "playground" ? "#playground" : "#guide";
+  location.hash = "#" + b.dataset.tab;
 }));
 window.addEventListener("hashchange", () => {
-  const h = location.hash;
-  if (h === "#playground") { showTab("playground"); window.scrollTo(0, 0); }
-  else { showTab("guide"); if (h === "" || h === "#guide") window.scrollTo(0, 0); }
+  const name = HASH2TAB[location.hash] || "guide";
+  showTab(name);
+  if (name !== "guide" || location.hash === "" || location.hash === "#guide") window.scrollTo(0, 0);
 });
 
 function renderAll() {
@@ -1645,13 +2002,15 @@ function renderAll() {
     renderHedge(); renderGex(); renderSim();
   }
   if (!tabEls.playground.hidden) renderPlayground();
+  if (!tabEls.history.hidden && HIST) renderTimeMachine();
 }
 let resizeTimer = null;
 window.addEventListener("resize", () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(renderAll, 150);
 });
-if (location.hash === "#playground") showTab("playground"); else renderAll();
+const initTab = HASH2TAB[location.hash];
+if (initTab) showTab(initTab); else renderAll();
 </script>
 </body>
 </html>

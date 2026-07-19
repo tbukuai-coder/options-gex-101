@@ -11,6 +11,12 @@ and the 0DTE era. Two tabs:
   call or put, and see total P/L vs. stock price — both "if it jumps there today"
   (Black–Scholes re-pricing at the option's listed IV) and at expiry — plus breakeven,
   max profit/loss, share-equivalent delta, and a what-if price slider.
+- **⏳ Time machine** — a game on real history: jump to a random past trading day or a
+  real past **earnings report date** (e.g. one of NVDA's actual reports), see only the
+  price chart up to that day, pick call/put × buy/sell × strike (±10%) × expiry
+  (2 weeks–3 months), then reveal — the true price path animates forward and your P/L
+  is scored (with a same-money-in-shares comparison). After the reveal you can flip
+  the position to see what a different trade would have done on the same day.
 
 ## Run it
 
@@ -32,6 +38,20 @@ A GitHub Action (`.github/workflows/refresh-data.yml`) reruns this on weekday ev
 (US close) and commits when the data changes; the script aborts non-zero on any sanity
 failure so a broken snapshot never lands. The Cboe API is not CORS-enabled, which is
 why the page uses a committed snapshot instead of fetching live in the browser.
+
+## Historical data (`hist.js`)
+
+`hist.js` feeds the Time-machine tab: ~6 years of split/dividend-adjusted daily closes
+on one shared trading calendar, plus each stock's real past earnings-report dates.
+Regenerate (rarely needed — history doesn't go stale) with:
+
+```bash
+python3 build_history.py   # needs yfinance
+```
+
+Since there is no free archive of historical *option* prices, the Time machine
+estimates premiums with Black–Scholes from trailing 3-month realized volatility
+(+35% markup on earnings scenarios) — disclosed in the UI.
 
 ## What's inside
 
