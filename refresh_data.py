@@ -5,7 +5,9 @@ Zero third-party dependencies (stdlib urllib only). For each ticker in
 TICKERS it downloads the full delayed chain from
 https://cdn.cboe.com/api/global/delayed_quotes/options/<TICKER>.json,
 keeps the expiries nearest to DTE_TARGETS and strikes within
-STRIKE_BAND of spot, and writes the compact result into data.js
+STRIKE_BAND of spot, and writes the compact result into data.js.
+Each option row is [strike, mid, iv, delta, bid, ask, open_interest]
+(consumers may index only the first four — extra fields are additive).
 (a `const CHAIN_DATA = {...}` between the ==DATA-START/END== markers,
 loaded via <script src> so the page still works over file://).
 
@@ -60,7 +62,8 @@ def build(ticker, today):
         if mid <= 0:
             continue
         chains.setdefault(exp, {"C": [], "P": []})[m.group(2)].append(
-            [round(strike, 2), mid, round(iv, 4), round(o.get("delta") or 0, 4)])
+            [round(strike, 2), mid, round(iv, 4), round(o.get("delta") or 0, 4),
+             round(bid, 3), round(ask, 3), int(o.get("open_interest") or 0)])
 
     assert chains, f"{ticker}: empty chain"
     exps = sorted(chains)

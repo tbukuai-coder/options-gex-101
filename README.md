@@ -5,7 +5,8 @@ options work and how option **dealer hedging** feeds back into the stock market 
 delta, gamma, **GEX (gamma exposure)**, the gamma flip, gamma squeezes, OPEX pinning,
 and the 0DTE era. Four tabs:
 
-- **📖 Guide** — the eleven-section interactive course (all data synthetic).
+- **📖 Guide** — the thirteen-section interactive course (synthetic data, except §9–10
+  which read the real chain snapshot).
 - **🧪 Playground** — build a real position from real (delayed) option chains: pick
   NVDA / TSLA / AAPL / MSFT / AMD / SPY, a listed expiry and strike, buy or sell a
   call or put, and see total P/L vs. stock price — both "if it jumps there today"
@@ -44,7 +45,8 @@ with r = 0) runs inline in vanilla JavaScript.
 
 `data.js` holds real **delayed Cboe quotes** (`cdn.cboe.com` delayed-quotes API):
 per ticker, the expiries nearest 7/30/60/120/240 DTE and strikes within ±30% of spot,
-each as `[strike, mid, iv, delta]`. Regenerate with:
+each as `[strike, mid, iv, delta, bid, ask, open_interest]` (consumers may read only
+the first four — the extra fields are additive). Regenerate with:
 
 ```bash
 python3 refresh_data.py   # stdlib only, no pip installs
@@ -81,9 +83,11 @@ estimates premiums with Black–Scholes from trailing 3-month realized volatilit
 | 6 | Vega & IV crush | Earnings-night straddle: value before vs after the overnight IV drop, cost line, flat-open loss + breakeven-move tiles, IV-before/after/DTE sliders |
 | 7 | Dealers & delta hedging | Flow diagram + hedge-ladder chart with "if price moves $2, dealer must trade N shares" tiles |
 | 8 | GEX | Diverging bar chart of dealer gamma by strike (synthetic OI, naive long-calls/short-puts convention), spot slider, net view, gamma-flip estimate, data table |
-| 9 | Vanna & charm | Dealer short-put hedge vs. price at two IVs; spot + IV-drop sliders; tiles for the vanna buy-back and 7-day charm unwind (both flip sign below the strike) |
-| 10 | Market regimes | Seeded simulation: identical shocks through positive-GEX (dampened) vs. negative-GEX (amplified) hedging feedback, with realized-vol tiles |
-| 11 | In the wild | GameStop gamma squeeze, Volmageddon, COVID crash, OPEX pinning, 0DTE, where GEX dashboards live |
+| 9 | Reading a real chain | Broker-style calls/strike/puts table from the live snapshot (OI, bid/ask, IV, delta; ITM shading, ATM highlight) with annotated how-to-read notes |
+| 10 | Smile & skew | Real IV-by-strike chart (call vs put) + ATM term structure by expiry, per ticker |
+| 11 | Vanna & charm | Dealer short-put hedge vs. price at two IVs; spot + IV-drop sliders; tiles for the vanna buy-back and 7-day charm unwind (both flip sign below the strike) |
+| 12 | Market regimes | Seeded simulation: identical shocks through positive-GEX (dampened) vs. negative-GEX (amplified) hedging feedback, with realized-vol tiles |
+| 13 | In the wild | GameStop gamma squeeze, Volmageddon, COVID crash, OPEX pinning, 0DTE, where GEX dashboards live |
 | — | Glossary + caveats | Every term used, plus an honest list of the model's simplifications |
 | 🧪 | Playground tab | Real-chain position builder: ticker/expiry/strike selectors, buy/sell × call/put, contracts, P/L-today + P/L-at-expiry chart, what-if slider |
 | 🦋 | Strategies tab | Multi-leg strategy lab: 9 recipes on real chains, leg chips, debit/credit, breakevens, max P/L, net delta/gamma tiles, per-strategy explainers |

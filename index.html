@@ -117,6 +117,26 @@ code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monosp
   padding: 5px 12px; font-size: 13.5px; background: var(--surface);
 }
 .toc a:hover { color: var(--ink); border-color: var(--baseline); }
+.toc .toc-group {
+  flex-basis: 100%; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+  margin: 8px 0 -2px;
+}
+.toc .toc-group:first-child { margin-top: 0; }
+
+/* ---------- real option-chain table ---------- */
+.chain-wrap { overflow-x: auto; margin: 10px 0 4px; }
+table.chain { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+table.chain th, table.chain td {
+  padding: 3px 8px; text-align: right; white-space: nowrap;
+  border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums;
+}
+table.chain th { color: var(--ink-2); font-weight: 600; font-size: 11.5px; }
+table.chain th.side { text-align: center; border-bottom: 2px solid var(--baseline); }
+table.chain td.k, table.chain th.k { text-align: center; font-weight: 700; }
+table.chain td.itm { background: var(--accent-wash); }
+table.chain tr.atm td { font-weight: 700; }
+table.chain tr.atm td.k { color: var(--series-1); }
 
 /* ---------- cards & callouts ---------- */
 .card {
@@ -279,17 +299,25 @@ calm the market on some days and amplify it on others. Every chart below is inte
 sliders and watch the curves respond.</p>
 
 <div class="toc">
+  <span class="toc-group">Basics</span>
   <a href="#s1">1 · What is an option?</a>
   <a href="#s2">2 · Price before expiry</a>
+  <span class="toc-group">The Greeks</span>
   <a href="#s3">3 · Delta</a>
   <a href="#s4">4 · Gamma</a>
   <a href="#s5">5 · Theta</a>
   <a href="#s6">6 · Vega &amp; IV crush</a>
+  <span class="toc-group">Dealers &amp; GEX</span>
   <a href="#s7">7 · Dealers &amp; hedging</a>
   <a href="#s8">8 · GEX</a>
-  <a href="#s9">9 · Vanna &amp; charm</a>
-  <a href="#s10">10 · Market regimes</a>
-  <a href="#s11">11 · In the wild</a>
+  <span class="toc-group">Real chains</span>
+  <a href="#s9">9 · Reading a chain</a>
+  <a href="#s10">10 · Smile &amp; skew</a>
+  <span class="toc-group">Flows &amp; regimes</span>
+  <a href="#s11">11 · Vanna &amp; charm</a>
+  <a href="#s12">12 · Market regimes</a>
+  <span class="toc-group">Wrap-up</span>
+  <a href="#s13">13 · In the wild</a>
   <a href="#glossary">Glossary</a>
 </div>
 
@@ -497,7 +525,7 @@ sliders and watch the curves respond.</p>
   <div class="callout"><span class="kicker">Key idea</span>
   <p>Delta and gamma are about the <i>stock price</i>; theta is about the <i>calendar</i>; vega is
   about the <i>market’s fear itself</i>. Option sellers are short all that fear — which is why a
-  volatility spike (section 10’s negative-GEX world) hurts them twice: the stock runs <i>and</i> IV
+  volatility spike (section 12’s negative-GEX world) hurts them twice: the stock runs <i>and</i> IV
   explodes.</p></div>
 </section>
 
@@ -595,9 +623,92 @@ sliders and watch the curves respond.</p>
   begets selling, and volatility expands. That’s why the flip level is watched like a tripwire.</p></div>
 </section>
 
-<!-- ================= 9. VANNA & CHARM ================= -->
+<!-- ================= 9. READING A REAL CHAIN ================= -->
 <section id="s9">
-  <h2><span class="num">9</span>Vanna &amp; charm: the flows nobody sees coming</h2>
+  <h2><span class="num">9</span>Reading a real option chain</h2>
+  <p>Everything so far ran on a synthetic $100 stock. Time to look at the real thing. Below is an
+  excerpt from an actual listed chain (the same delayed Cboe snapshot the Playground uses) laid out
+  the way every broker shows it: <b>calls on the left, puts on the right, strikes down the
+  middle</b>.</p>
+
+  <div class="card chart-card">
+    <p class="chart-title">The chain, annotated</p>
+    <p class="chart-sub" id="chainSub"></p>
+    <div class="controls">
+      <div class="ctl"><label>Stock</label>
+        <div class="seg" id="chainTicker" role="group" aria-label="Ticker">
+          <button aria-pressed="true" data-v="NVDA">NVDA</button>
+          <button aria-pressed="false" data-v="TSLA">TSLA</button>
+          <button aria-pressed="false" data-v="AAPL">AAPL</button>
+          <button aria-pressed="false" data-v="MSFT">MSFT</button>
+          <button aria-pressed="false" data-v="AMD">AMD</button>
+          <button aria-pressed="false" data-v="SPY">SPY</button>
+        </div>
+      </div>
+      <div class="ctl"><label for="chainExp">Expiry</label>
+        <select id="chainExp"></select>
+      </div>
+    </div>
+    <div class="chain-wrap"><table class="chain" id="chainTable"></table></div>
+    <p class="tryit"><b>How to read it:</b>
+    ① <b>Bid / ask</b> — your real prices. You buy at the ask and sell at the bid; the “mid” used
+    elsewhere on this site is optimistic by half that spread, and multi-leg strategies pay it once
+    per leg.
+    ② <b>Delta</b> doubles as the market’s rough odds that the option expires in the money — a
+    0.25-delta call is priced as a one-in-four shot. Watch it fall as strikes climb away from the
+    price.
+    ③ <b>OI (open interest)</b> is where the gamma lives: the largest numbers mark the strikes that
+    §8’s GEX chart is built from — look for the put wall below the price and the call wall above.
+    ④ The shaded cells are <b>in the money</b> (calls below the price, puts above) — almost all of
+    their value is intrinsic, which is why their deltas sit near ±1.</p>
+  </div>
+
+  <div class="callout"><span class="kicker">From table to dashboard</span>
+  <p>Every professional GEX dashboard is, at heart, this table: gamma × open interest × 100 shares,
+  summed strike by strike. Once you can read a chain, §8 stops being abstract — you can point at
+  the rows the hedging pressure comes from.</p></div>
+</section>
+
+<!-- ================= 10. IV SMILE & TERM STRUCTURE ================= -->
+<section id="s10">
+  <h2><span class="num">10</span>The volatility smile: fear, priced strike by strike</h2>
+  <p>Black–Scholes assumes one volatility per stock. The market disagrees: every strike trades at
+  its <i>own</i> implied volatility. Plot IV against strike and equities show a lopsided
+  <b>smile</b> — the <b>skew</b> — with downside puts almost always commanding more vol than
+  upside calls. This is §8’s standing assumption caught on camera: the world persistently pays up
+  for crash protection, and dealers carry the other side of it.</p>
+
+  <div class="card chart-card">
+    <p class="chart-title">Implied volatility by strike — real quotes</p>
+    <p class="chart-sub" id="smileSub"></p>
+    <div class="chart" id="smileChart"></div>
+    <p class="tryit"><b>Try it:</b> the stock and expiry selectors in §9 drive this chart too.
+    Look at <b>SPY</b> first: the left side of the curve towers over the right — index puts are
+    structurally expensive because everyone insures the same portfolio. Then flip to a single
+    stock like NVDA or TSLA: the skew flattens and sometimes tilts toward calls, the footprint of
+    upside speculation. Same math, opposite fear.</p>
+  </div>
+
+  <div class="card chart-card">
+    <p class="chart-title">Term structure — at-the-money IV by expiry</p>
+    <p class="chart-sub" id="termSub"></p>
+    <div class="chart" id="termChart"></div>
+    <p class="tryit"><b>Read it:</b> flat or gently rising is the calm default. A <b>bulge</b> in
+    one expiry means the market expects news inside that window — an earnings date sitting between
+    two expiries lifts the one that contains it (§6’s inflated pre-earnings IV, visible in real
+    quotes). A <b>downward</b> slope near the front means fear is concentrated right now.</p>
+  </div>
+
+  <div class="callout"><span class="kicker">Why the smile matters here</span>
+  <p>Skew is the standing evidence for the dealer-positioning story: customers own the downside
+  puts (expensive vol), dealers are short them — which is the raw fuel for §11’s vanna flows and
+  the negative-gamma spiral of §12. When skew steepens sharply, it means the market is loading up
+  on exactly the positions that make crashes self-reinforcing.</p></div>
+</section>
+
+<!-- ================= 11. VANNA & CHARM ================= -->
+<section id="s11">
+  <h2><span class="num">11</span>Vanna &amp; charm: the flows nobody sees coming</h2>
   <p>GEX explains hedging driven by <i>price</i> moves. But dealer hedges also shift when
   <b>volatility</b> changes and when <b>time</b> passes — even if the price goes nowhere. The two
   Greeks behind that are <b>vanna</b> (how delta responds to IV) and <b>charm</b> (how delta decays
@@ -644,9 +755,9 @@ sliders and watch the curves respond.</p>
   reasons.</p></div>
 </section>
 
-<!-- ================= 10. REGIMES SIMULATION ================= -->
-<section id="s10">
-  <h2><span class="num">10</span>See it: the same market in two regimes</h2>
+<!-- ================= 12. REGIMES SIMULATION ================= -->
+<section id="s12">
+  <h2><span class="num">12</span>See it: the same market in two regimes</h2>
   <p>Here is a toy simulation. All three paths get the <b>identical sequence of random news
   shocks</b>. The only difference is the hedging feedback: in the positive-GEX world, dealers trade
   <i>against</i> each move and absorb part of it; in the negative-GEX world they <i>chase</i> each
@@ -677,9 +788,9 @@ sliders and watch the curves respond.</p>
   </div>
 </section>
 
-<!-- ================= 11. IN THE WILD ================= -->
-<section id="s11">
-  <h2><span class="num">11</span>Where you’ve seen this in the wild</h2>
+<!-- ================= 13. IN THE WILD ================= -->
+<section id="s13">
+  <h2><span class="num">13</span>Where you’ve seen this in the wild</h2>
 
   <div class="card">
     <h3>🚀 The gamma squeeze (GameStop, January 2021)</h3>
@@ -703,9 +814,9 @@ sliders and watch the curves respond.</p>
     <h3>🦠 The COVID crash (February–March 2020)</h3>
     <p>Negative gamma at index scale: as the S&amp;P 500 fell through one put-heavy strike after
     another, dealers short those puts (§8’s standing assumption) had to sell more futures the
-    further the market dropped — section 10’s simulator playing out live. Circuit breakers tripped
+    further the market dropped — section 12’s simulator playing out live. Circuit breakers tripped
     four times in two weeks. Then the machine ran in reverse: once panic peaked and volatility
-    drained, vanna and charm buy-backs (§9) helped fuel one of the fastest recoveries on
+    drained, vanna and charm buy-backs (§11) helped fuel one of the fastest recoveries on
     record.</p>
   </div>
 
@@ -751,6 +862,9 @@ sliders and watch the curves respond.</p>
     <dt>Theta</dt><dd>Daily decay of an option’s time value.</dd>
     <dt>Vega</dt><dd>Option price change per 1-point change in implied volatility.</dd>
     <dt>IV crush</dt><dd>The collapse of implied volatility right after a known event (like earnings) — option prices deflate even if the stock barely moves.</dd>
+    <dt>Bid / ask / mid</dt><dd>The prices you can actually sell at (bid) and buy at (ask); the mid is their average — a convenient fiction real fills don’t match.</dd>
+    <dt>Skew (volatility smile)</dt><dd>The pattern of IV varying by strike; in equities, downside puts usually carry the highest IV.</dd>
+    <dt>Term structure</dt><dd>ATM IV across expiries; bulges mark windows the market expects news in.</dd>
     <dt>Vanna</dt><dd>How delta responds to a change in implied volatility; drives dealer re-hedging when vol rises or falls.</dd>
     <dt>Charm</dt><dd>How delta decays as time passes; drives the slow hedge unwind into expiration.</dd>
     <dt>Market maker / dealer</dt><dd>The professional counterparty on most option trades; hedges rather than bets.</dd>
@@ -1146,6 +1260,9 @@ function fmtCompact$(v) {
   if (a >= 1e3) return sign + (a / 1e3).toFixed(0) + "K";
   return sign + a.toFixed(0);
 }
+
+/* real chain snapshot from data.js (used by Guide §9–10, Playground, Strategies) */
+const CHAIN = typeof CHAIN_DATA !== "undefined" ? CHAIN_DATA : null;
 
 /* ---------- theme ---------- */
 const themeBtn = document.getElementById("themeToggle");
@@ -1904,7 +2021,140 @@ segWire("gexMode", "mode", gexState, renderGex);
 document.getElementById("gexSpot").addEventListener("input", e => { gexState.spot = +e.target.value; renderGex(); });
 
 /* ================================================================
-   Section 9 — vanna & charm: hedge shifts with no price move
+   Sections 9 & 10 — real chain table + IV smile & term structure
+   (both driven by the §9 ticker/expiry controls; needs data.js rows
+   with [K, mid, iv, delta, bid, ask, oi])
+   ================================================================ */
+const cs = { tk: "NVDA", exp: null };
+const chainExpSel = document.getElementById("chainExp");
+function csFillExp() {
+  const exps = pgExpiries(cs.tk);
+  if (!cs.exp || !exps.includes(cs.exp)) {
+    cs.exp = exps.reduce((a, b) => Math.abs(pgDte(b) - 30) < Math.abs(pgDte(a) - 30) ? b : a, exps[0]);
+  }
+  chainExpSel.textContent = "";
+  for (const e of exps) {
+    const o = document.createElement("option");
+    o.value = e;
+    o.textContent = new Date(e + "T12:00:00").toLocaleDateString("en-US",
+      { month: "short", day: "numeric", year: "numeric" }) + " · " + Math.round(pgDte(e)) + "d";
+    o.selected = e === cs.exp;
+    chainExpSel.appendChild(o);
+  }
+}
+function renderChainSection() {
+  if (!CHAIN) return;
+  const T = tokens();
+  const spot = CHAIN.tickers[cs.tk].spot;
+  const ch = CHAIN.tickers[cs.tk].expiries[cs.exp];
+  const hasExtra = ch.C[0].length >= 7;   // old snapshots lack bid/ask/oi
+  document.getElementById("chainSub").textContent =
+    cs.tk + " · price $" + spot.toFixed(2) + " · delayed Cboe snapshot " + CHAIN.asof +
+    " · shaded = in the money";
+
+  /* ---- §9 table: calls | strike | puts, centred on the money ---- */
+  const pMap = new Map(ch.P.map(r => [r[0], r]));
+  const both = ch.C.filter(r => pMap.has(r[0]));
+  let atmI = 0;
+  both.forEach((r, i) => { if (Math.abs(r[0] - spot) < Math.abs(both[atmI][0] - spot)) atmI = i; });
+  const rows = both.slice(Math.max(0, atmI - 6), atmI + 7);
+  const tbl = document.getElementById("chainTable");
+  tbl.textContent = "";
+  const mk = (tag, cls, text, parent) => {
+    const el2 = document.createElement(tag);
+    if (cls) el2.className = cls;
+    el2.textContent = text;
+    parent.appendChild(el2);
+    return el2;
+  };
+  const thead = document.createElement("thead");
+  const h1 = document.createElement("tr");
+  const cSide = mk("th", "side", "Calls", h1); cSide.colSpan = hasExtra ? 5 : 3;
+  mk("th", "k", "", h1);
+  const pSide = mk("th", "side", "Puts", h1); pSide.colSpan = hasExtra ? 5 : 3;
+  thead.appendChild(h1);
+  const h2 = document.createElement("tr");
+  const cCols = hasExtra ? ["OI", "Bid", "Ask", "IV", "Δ"] : ["Mid", "IV", "Δ"];
+  const pCols = hasExtra ? ["Δ", "IV", "Bid", "Ask", "OI"] : ["Δ", "IV", "Mid"];
+  for (const c of cCols) mk("th", "", c, h2);
+  mk("th", "k", "Strike", h2);
+  for (const c of pCols) mk("th", "", c, h2);
+  thead.appendChild(h2);
+  tbl.appendChild(thead);
+  const tbody = document.createElement("tbody");
+  const fOI = v => v >= 10000 ? (v / 1000).toFixed(0) + "K" : String(v);
+  for (const r of rows) {
+    const p = pMap.get(r[0]);
+    const tr = document.createElement("tr");
+    if (r[0] === both[atmI][0]) tr.className = "atm";
+    const cItm = r[0] < spot ? "itm" : "", pItm = r[0] > spot ? "itm" : "";
+    const cCells = hasExtra
+      ? [fOI(r[6]), r[4].toFixed(2), r[5].toFixed(2), Math.round(r[2] * 100) + "%", r[3].toFixed(2)]
+      : [r[1].toFixed(2), Math.round(r[2] * 100) + "%", r[3].toFixed(2)];
+    const pCells = hasExtra
+      ? [p[3].toFixed(2), Math.round(p[2] * 100) + "%", p[4].toFixed(2), p[5].toFixed(2), fOI(p[6])]
+      : [p[3].toFixed(2), Math.round(p[2] * 100) + "%", p[1].toFixed(2)];
+    for (const c of cCells) mk("td", cItm, c, tr);
+    mk("td", "k", "$" + r[0], tr);
+    for (const c of pCells) mk("td", pItm, c, tr);
+    tbody.appendChild(tr);
+  }
+  tbl.appendChild(tbody);
+
+  /* ---- §10 smile: IV by strike, calls vs puts ---- */
+  document.getElementById("smileSub").textContent =
+    cs.tk + " · " + new Date(cs.exp + "T12:00:00").toLocaleDateString("en-US",
+      { month: "short", day: "numeric", year: "numeric" }) + " expiry (" + Math.round(pgDte(cs.exp)) + "d)" +
+    " · every strike trades its own IV";
+  const xsK = both.map(r => r[0]);
+  const cIV = both.map(r => r[2] * 100);
+  const pIV = both.map(r => pMap.get(r[0])[2] * 100);
+  const ivAll = [...cIV, ...pIV];
+  const yLo = Math.max(0, Math.min(...ivAll) * 0.9), yHi = Math.max(...ivAll) * 1.06;
+  renderLineChart(document.getElementById("smileChart"), {
+    height: 300, xDomain: [xsK[0], xsK[xsK.length - 1]], yDomain: [yLo, yHi], xs: xsK,
+    series: [
+      { name: "Call IV", color: T.s1, values: cIV },
+      { name: "Put IV", color: T.s2, values: pIV }
+    ],
+    fmtX: v => "$" + Math.round(v), ttFmtX: v => "strike $" + v,
+    fmtY: v => Math.round(v) + "%", ttFmtY: v => v.toFixed(1) + "%",
+    xLabel: "Strike price", yLabel: "Implied volatility",
+    ariaLabel: "Implied volatility by strike for the selected chain",
+    annotations: [{ type: "vline", x: spot, label: "price now" }]
+  });
+
+  /* ---- §10 term structure: ATM IV per listed expiry ---- */
+  const exps = pgExpiries(cs.tk);
+  const pts = exps.map(e => {
+    const c2 = CHAIN.tickers[cs.tk].expiries[e];
+    const pm = new Map(c2.P.map(r => [r[0], r]));
+    const b2 = c2.C.filter(r => pm.has(r[0]));
+    const atm = b2.reduce((a, r) => Math.abs(r[0] - spot) < Math.abs(a[0] - spot) ? r : a, b2[0]);
+    return { dte: pgDte(e), iv: (atm[2] + pm.get(atm[0])[2]) / 2 * 100 };
+  }).sort((a, b) => a.dte - b.dte);
+  document.getElementById("termSub").textContent =
+    cs.tk + " · average of ATM call & put IV at each listed expiry";
+  const tIVs = pts.map(p2 => p2.iv);
+  renderLineChart(document.getElementById("termChart"), {
+    height: 260, xDomain: [0, Math.max(...pts.map(p2 => p2.dte)) * 1.05],
+    yDomain: [Math.max(0, Math.min(...tIVs) * 0.85), Math.max(...tIVs) * 1.1],
+    xs: pts.map(p2 => p2.dte),
+    series: [{ name: "ATM IV", color: T.s1, values: tIVs }],
+    fmtX: v => Math.round(v) + "d", ttFmtX: v => Math.round(v) + " days to expiry",
+    fmtY: v => Math.round(v) + "%", ttFmtY: v => v.toFixed(1) + "%",
+    xLabel: "Days to expiry", yLabel: "ATM implied volatility",
+    ariaLabel: "At-the-money implied volatility by expiry"
+  });
+}
+if (CHAIN) {
+  segWire("chainTicker", "tk", cs, () => { cs.exp = null; csFillExp(); renderChainSection(); });
+  chainExpSel.addEventListener("change", () => { cs.exp = chainExpSel.value; renderChainSection(); });
+  csFillExp();
+}
+
+/* ================================================================
+   Section 11 — vanna & charm: hedge shifts with no price move
    ================================================================ */
 const vannaState = { spot: 100, drop: 0.10 };
 const VANNA = { K: 95, T: 30 / 365, iv: 0.30, contracts: 10 };  // dealer short 10 puts
@@ -1954,7 +2204,7 @@ document.getElementById("vannaSpot").addEventListener("input", e => { vannaState
 document.getElementById("vannaDrop").addEventListener("input", e => { vannaState.drop = +e.target.value / 100; renderVanna(); });
 
 /* ================================================================
-   Section 10 — regime simulation
+   Section 12 — regime simulation
    ================================================================ */
 const simState = { k: 0.45, seed: 7 };
 function mulberry32(a) {
@@ -2025,7 +2275,6 @@ document.getElementById("simReplay").addEventListener("click", () => { simState.
 /* ================================================================
    Playground — real option chains from the data.js snapshot
    ================================================================ */
-const CHAIN = typeof CHAIN_DATA !== "undefined" ? CHAIN_DATA : null;
 const pg = { tk: "NVDA", exp: null, K: null, type: "call", side: "buy", n: 1, whatIf: null };
 const pgExpSel = document.getElementById("pgExp");
 const pgStrikeSel = document.getElementById("pgStrike");
@@ -2226,7 +2475,7 @@ const STRATEGIES = {
       " an out-of-the-money call spread. You collect both credits; expire anywhere between the two" +
       " short strikes and you keep everything, while the long wings cap the worst case. The classic" +
       " “income from time decay” trade.</p><p><b>Gamma lens:</b> a condor seller is short" +
-      " gamma on both sides — the friend of the calm positive-GEX regime from §10, and the first" +
+      " gamma on both sides — the friend of the calm positive-GEX regime from §12, and the first" +
       " casualty of a gamma squeeze. When people say “volatility sellers got run over”," +
       " this is usually the position they mean.</p>"
   },
@@ -3046,7 +3295,7 @@ function renderAll() {
   if (!tabEls.guide.hidden) {
     renderPayoff(); renderValue(); renderDelta(); renderGamma();
     renderTheta(); renderVega();
-    renderHedge(); renderGex(); renderVanna(); renderSim();
+    renderHedge(); renderGex(); renderChainSection(); renderVanna(); renderSim();
   }
   if (!tabEls.playground.hidden) renderPlayground();
   if (!tabEls.strategies.hidden && CHAIN) renderStrategies();
