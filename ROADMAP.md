@@ -2,9 +2,10 @@
 
 Prioritized backlog. Items are ordered by (impact on the site's teaching mission) ×
 (feasibility with the current zero-dependency, snapshot-data architecture).
-Done so far: Guide (10 sections, incl. theta & vega/IV-crush added 2026-07-19),
-Playground, Strategies lab (9 recipes on real chains), Time machine (single +
-multi-leg on real history, earnings-season playbook).
+Done so far: Guide (11 sections — theta, vega/IV-crush and vanna/charm added
+2026-07-19, plus Volmageddon & COVID cards in "In the wild"), Playground, Strategies
+lab (9 recipes on real chains), Time machine (single + multi-leg on real history,
+earnings-season playbook).
 
 ## 1 · Real GEX dashboard from real chains ⭐ the namesake feature
 

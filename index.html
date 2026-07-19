@@ -287,8 +287,9 @@ sliders and watch the curves respond.</p>
   <a href="#s6">6 · Vega &amp; IV crush</a>
   <a href="#s7">7 · Dealers &amp; hedging</a>
   <a href="#s8">8 · GEX</a>
-  <a href="#s9">9 · Market regimes</a>
-  <a href="#s10">10 · In the wild</a>
+  <a href="#s9">9 · Vanna &amp; charm</a>
+  <a href="#s10">10 · Market regimes</a>
+  <a href="#s11">11 · In the wild</a>
   <a href="#glossary">Glossary</a>
 </div>
 
@@ -496,7 +497,7 @@ sliders and watch the curves respond.</p>
   <div class="callout"><span class="kicker">Key idea</span>
   <p>Delta and gamma are about the <i>stock price</i>; theta is about the <i>calendar</i>; vega is
   about the <i>market’s fear itself</i>. Option sellers are short all that fear — which is why a
-  volatility spike (section 9’s negative-GEX world) hurts them twice: the stock runs <i>and</i> IV
+  volatility spike (section 10’s negative-GEX world) hurts them twice: the stock runs <i>and</i> IV
   explodes.</p></div>
 </section>
 
@@ -594,9 +595,58 @@ sliders and watch the curves respond.</p>
   begets selling, and volatility expands. That’s why the flip level is watched like a tripwire.</p></div>
 </section>
 
-<!-- ================= 9. REGIMES SIMULATION ================= -->
+<!-- ================= 9. VANNA & CHARM ================= -->
 <section id="s9">
-  <h2><span class="num">9</span>See it: the same market in two regimes</h2>
+  <h2><span class="num">9</span>Vanna &amp; charm: the flows nobody sees coming</h2>
+  <p>GEX explains hedging driven by <i>price</i> moves. But dealer hedges also shift when
+  <b>volatility</b> changes and when <b>time</b> passes — even if the price goes nowhere. The two
+  Greeks behind that are <b>vanna</b> (how delta responds to IV) and <b>charm</b> (how delta decays
+  with time), and together they explain some of the market’s strangest habits.</p>
+  <p>Recall §8’s standing assumption: customers own protective puts below the market, and dealers
+  are short them. A short put hands the dealer <i>positive</i> delta, which they neutralize by
+  <b>shorting stock</b>. Now watch what happens to that hedge while the price does nothing at
+  all:</p>
+
+  <div class="card chart-card">
+    <p class="chart-title">Shares the dealer shorts against 10 short puts (strike $95, 30 days)</p>
+    <p class="chart-sub" id="vannaSub"></p>
+    <div class="controls">
+      <div class="ctl"><label for="vannaSpot">Stock price now</label>
+        <input type="range" id="vannaSpot" min="85" max="115" step="0.5" value="100">
+        <output id="vannaSpotOut"></output>
+      </div>
+      <div class="ctl"><label for="vannaDrop">IV drops by</label>
+        <input type="range" id="vannaDrop" min="2" max="20" step="1" value="10">
+        <output id="vannaDropOut"></output>
+      </div>
+    </div>
+    <div class="chart" id="vannaChart"></div>
+    <div class="tiles">
+      <div class="tile"><div class="t-label">Hedge held right now</div><div class="t-value" id="vannaNow">—</div><div class="t-note">shares held short · IV 30%</div></div>
+      <div class="tile"><div class="t-label">Vanna: the IV drop lands</div><div class="t-value" id="vannaBuy">—</div><div class="t-note" id="vannaBuyNote"></div></div>
+      <div class="tile"><div class="t-label">Charm: a quiet week passes</div><div class="t-value" id="charmBuy">—</div><div class="t-note" id="charmBuyNote"></div></div>
+    </div>
+    <p class="tryit"><b>Try it:</b> park the price at $100 and let IV drop 10 points: the put’s
+    delta shrinks toward zero, so the dealer buys back shorted shares <i>into a market where
+    nothing happened</i>. That is the <b>vanna flow</b> — the mechanical bid behind post-event
+    drifts. The charm tile shows the same unwind from time alone: every quiet day, out-of-the-money
+    deltas decay and hedges get bought back. Now drag the price to $90, <i>below</i> the strike:
+    both tiles flip sign — once the puts are in the money, the same mechanics force dealers to
+    short <b>more</b>, pressing an already falling market.</p>
+  </div>
+
+  <div class="callout"><span class="kicker">Where you feel it</span>
+  <p><b>Post-event drift:</b> earnings, CPI prints, Fed days — the news lands, IV crushes (§6),
+  vanna buy-backs kick in, and the index grinds higher on no new information.
+  <b>OPEX cycles:</b> charm flows quietly support the tape into monthly expiration, then charm and
+  gamma vanish together — one reason the week <i>after</i> OPEX is often the wildest of the month.
+  Professional dashboards publish vanna and charm exposure right alongside GEX for exactly these
+  reasons.</p></div>
+</section>
+
+<!-- ================= 10. REGIMES SIMULATION ================= -->
+<section id="s10">
+  <h2><span class="num">10</span>See it: the same market in two regimes</h2>
   <p>Here is a toy simulation. All three paths get the <b>identical sequence of random news
   shocks</b>. The only difference is the hedging feedback: in the positive-GEX world, dealers trade
   <i>against</i> each move and absorb part of it; in the negative-GEX world they <i>chase</i> each
@@ -627,9 +677,9 @@ sliders and watch the curves respond.</p>
   </div>
 </section>
 
-<!-- ================= 10. IN THE WILD ================= -->
-<section id="s10">
-  <h2><span class="num">10</span>Where you’ve seen this in the wild</h2>
+<!-- ================= 11. IN THE WILD ================= -->
+<section id="s11">
+  <h2><span class="num">11</span>Where you’ve seen this in the wild</h2>
 
   <div class="card">
     <h3>🚀 The gamma squeeze (GameStop, January 2021)</h3>
@@ -637,6 +687,26 @@ sliders and watch the curves respond.</p>
     them were short gamma and had to buy shares as the price rose — which pushed the price higher,
     raising the calls’ deltas, forcing <i>more</i> buying. The hedging loop itself became the rally.
     That feedback spiral is a <b>gamma squeeze</b>.</p>
+  </div>
+
+  <div class="card">
+    <h3>💥 Volmageddon (February 5, 2018)</h3>
+    <p>After years of calm, betting against volatility had become an industry — “short-vol”
+    products like XIV collected theta every day (§5) while quietly staying short vega (§6). When
+    the VIX roughly doubled in one afternoon, those products had to buy back volatility futures
+    <i>into</i> the spike to rebalance — the volatility version of a gamma squeeze. XIV lost over
+    90% overnight and was liquidated. The tail its holders had been paid to carry showed up all at
+    once.</p>
+  </div>
+
+  <div class="card">
+    <h3>🦠 The COVID crash (February–March 2020)</h3>
+    <p>Negative gamma at index scale: as the S&amp;P 500 fell through one put-heavy strike after
+    another, dealers short those puts (§8’s standing assumption) had to sell more futures the
+    further the market dropped — section 10’s simulator playing out live. Circuit breakers tripped
+    four times in two weeks. Then the machine ran in reverse: once panic peaked and volatility
+    drained, vanna and charm buy-backs (§9) helped fuel one of the fastest recoveries on
+    record.</p>
   </div>
 
   <div class="card">
@@ -681,6 +751,8 @@ sliders and watch the curves respond.</p>
     <dt>Theta</dt><dd>Daily decay of an option’s time value.</dd>
     <dt>Vega</dt><dd>Option price change per 1-point change in implied volatility.</dd>
     <dt>IV crush</dt><dd>The collapse of implied volatility right after a known event (like earnings) — option prices deflate even if the stock barely moves.</dd>
+    <dt>Vanna</dt><dd>How delta responds to a change in implied volatility; drives dealer re-hedging when vol rises or falls.</dd>
+    <dt>Charm</dt><dd>How delta decays as time passes; drives the slow hedge unwind into expiration.</dd>
     <dt>Market maker / dealer</dt><dd>The professional counterparty on most option trades; hedges rather than bets.</dd>
     <dt>Delta hedging</dt><dd>Holding delta × 100 shares per contract to neutralize direction.</dd>
     <dt>Open interest (OI)</dt><dd>Number of contracts outstanding at a strike.</dd>
@@ -1832,7 +1904,57 @@ segWire("gexMode", "mode", gexState, renderGex);
 document.getElementById("gexSpot").addEventListener("input", e => { gexState.spot = +e.target.value; renderGex(); });
 
 /* ================================================================
-   Section 9 — regime simulation
+   Section 9 — vanna & charm: hedge shifts with no price move
+   ================================================================ */
+const vannaState = { spot: 100, drop: 0.10 };
+const VANNA = { K: 95, T: 30 / 365, iv: 0.30, contracts: 10 };  // dealer short 10 puts
+/* dealer is +delta from the short puts → holds −putDelta × 1,000 shares SHORT */
+function vannaShort(S, T, iv) { return -bs(S, VANNA.K, T, iv).deltaPut * VANNA.contracts * 100; }
+function renderVanna() {
+  const T = tokens();
+  const { spot, drop } = vannaState;
+  const ivLo = Math.max(0.05, VANNA.iv - drop);
+  document.getElementById("vannaSpotOut").textContent = fmt$2(spot);
+  document.getElementById("vannaDropOut").textContent =
+    Math.round(drop * 100) + " pts (30% → " + Math.round(ivLo * 100) + "%)";
+  document.getElementById("vannaSub").textContent =
+    "Dealer short 10 puts, strike $95 · hedge = −put delta × 1,000 shares held short · price never moves";
+  const xs = []; for (let s = 85; s <= 115; s += 0.25) xs.push(s);
+  const now = vannaShort(spot, VANNA.T, VANNA.iv);
+  const vanna = now - vannaShort(spot, VANNA.T, ivLo);          // >0 = buy-back
+  const charm = now - vannaShort(spot, 23 / 365, VANNA.iv);     // 7 quiet days pass
+  document.getElementById("vannaNow").textContent = fmtInt(now);
+  document.getElementById("vannaBuy").textContent = (vanna >= 0 ? "+" : "−") + fmtInt(Math.abs(vanna));
+  document.getElementById("vannaBuyNote").textContent = vanna >= 0
+    ? "shares bought back the moment IV falls to " + Math.round(ivLo * 100) + "%"
+    : "extra shares SOLD short — below the strike, the flow flips";
+  document.getElementById("charmBuy").textContent = (charm >= 0 ? "+" : "−") + fmtInt(Math.abs(charm));
+  document.getElementById("charmBuyNote").textContent = charm >= 0
+    ? "shares bought back · same price, same IV, 7 days later"
+    : "extra shares SOLD short · in the money, time deepens the hedge";
+  renderLineChart(document.getElementById("vannaChart"), {
+    height: 300, xDomain: [85, 115], yDomain: [0, 1050], xs,
+    yTicks: [0, 250, 500, 750, 1000],
+    series: [
+      { name: "Hedge at IV 30%", color: T.s1, values: xs.map(S => vannaShort(S, VANNA.T, VANNA.iv)) },
+      { name: "After the drop (" + Math.round(ivLo * 100) + "%)", color: T.s3,
+        values: xs.map(S => vannaShort(S, VANNA.T, ivLo)) }
+    ],
+    fmtX: v => "$" + v, fmtY: fmtInt, ttFmtY: v => fmtInt(v) + " sh",
+    xLabel: "Stock price", yLabel: "Shares held short",
+    ariaLabel: "Dealer short-put hedge before and after an implied volatility drop",
+    annotations: [
+      { type: "vline", x: VANNA.K, label: "put strike $95" },
+      { type: "point", x: spot, y: now, color: T.s1,
+        label: "now: " + fmtInt(now) + " sh short", anchor: spot > 106 ? "end" : "start", dy: -9 }
+    ]
+  });
+}
+document.getElementById("vannaSpot").addEventListener("input", e => { vannaState.spot = +e.target.value; renderVanna(); });
+document.getElementById("vannaDrop").addEventListener("input", e => { vannaState.drop = +e.target.value / 100; renderVanna(); });
+
+/* ================================================================
+   Section 10 — regime simulation
    ================================================================ */
 const simState = { k: 0.45, seed: 7 };
 function mulberry32(a) {
@@ -2104,7 +2226,7 @@ const STRATEGIES = {
       " an out-of-the-money call spread. You collect both credits; expire anywhere between the two" +
       " short strikes and you keep everything, while the long wings cap the worst case. The classic" +
       " “income from time decay” trade.</p><p><b>Gamma lens:</b> a condor seller is short" +
-      " gamma on both sides — the friend of the calm positive-GEX regime from §9, and the first" +
+      " gamma on both sides — the friend of the calm positive-GEX regime from §10, and the first" +
       " casualty of a gamma squeeze. When people say “volatility sellers got run over”," +
       " this is usually the position they mean.</p>"
   },
@@ -2924,7 +3046,7 @@ function renderAll() {
   if (!tabEls.guide.hidden) {
     renderPayoff(); renderValue(); renderDelta(); renderGamma();
     renderTheta(); renderVega();
-    renderHedge(); renderGex(); renderSim();
+    renderHedge(); renderGex(); renderVanna(); renderSim();
   }
   if (!tabEls.playground.hidden) renderPlayground();
   if (!tabEls.strategies.hidden && CHAIN) renderStrategies();
