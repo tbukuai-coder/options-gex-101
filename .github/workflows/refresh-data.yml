@@ -1,0 +1,28 @@
+name: Refresh option-chain data
+
+on:
+  schedule:
+    - cron: "20 22 * * 1-5"   # weekdays 22:20 UTC, after the US close
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Refresh data.js from Cboe
+        run: python3 refresh_data.py
+      - name: Commit if changed
+        run: |
+          if git diff --quiet data.js; then
+            echo "No data change."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data.js
+          git commit -m "chore: refresh option-chain snapshots"
+          git push

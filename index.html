@@ -85,6 +85,13 @@ header.site {
 }
 header.site .brand { font-weight: 700; font-size: 15px; }
 header.site .brand span { color: var(--muted); font-weight: 400; }
+@media (max-width: 640px) { header.site .brand span { display: none; } }
+.tabs { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; background: var(--surface); }
+.tabs button {
+  border: 0; background: transparent; color: var(--ink-2);
+  padding: 6px 16px; font: inherit; font-size: 13.5px; cursor: pointer;
+}
+.tabs button[aria-pressed="true"] { background: var(--series-1); color: #fff; font-weight: 600; }
 main { max-width: 880px; margin: 0 auto; padding: 24px 20px 80px; }
 section { margin: 56px 0; scroll-margin-top: 72px; }
 h1 { font-size: clamp(28px, 5vw, 40px); line-height: 1.15; margin: 24px 0 12px; }
@@ -132,6 +139,12 @@ code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monosp
 .ctl label { font-size: 12.5px; color: var(--ink-2); }
 .ctl output { font-size: 13.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
 input[type="range"] { width: 150px; accent-color: var(--series-1); }
+select, input[type="number"] {
+  font: inherit; font-size: 13.5px; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 8px; max-width: 190px;
+}
+input[type="number"] { width: 80px; }
 .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface); }
 .seg button {
   border: 0; background: transparent; color: var(--ink-2);
@@ -222,10 +235,14 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 40px 0; }
 
 <header class="site">
   <div class="brand">Options, Gamma &amp; GEX <span>· a visual guide</span></div>
+  <div class="tabs" id="tabBar" role="tablist" aria-label="Site sections">
+    <button aria-pressed="true" data-tab="guide">📖 Guide</button>
+    <button aria-pressed="false" data-tab="playground">🧪 Playground</button>
+  </div>
   <button class="plain" id="themeToggle" aria-label="Toggle color theme">◐ Theme</button>
 </header>
 
-<main>
+<main id="tab-guide">
 
 <h1>How options quietly move the stock market</h1>
 <p class="lead">You have probably heard traders talk about <b>gamma squeezes</b>, <b>0DTE</b>, or
@@ -570,11 +587,92 @@ sliders and watch the curves respond.</p>
 
 </main>
 
+<main id="tab-playground" hidden>
+  <h1>Trade playground — real option chains</h1>
+  <p class="lead">Pick a real stock and a real option from its listed chain (delayed Cboe quotes),
+  choose whether you <b>buy or sell</b> it, and see exactly what a price move does to your profit
+  and loss — both instantly and at expiry.</p>
+
+  <div class="card chart-card">
+    <p class="chart-title">Build a position</p>
+    <p class="chart-sub" id="pgStatus">Loading data…</p>
+    <div class="controls">
+      <div class="ctl"><label>Stock</label>
+        <div class="seg" id="pgTicker" role="group" aria-label="Ticker">
+          <button aria-pressed="true" data-v="NVDA">NVDA</button>
+          <button aria-pressed="false" data-v="TSLA">TSLA</button>
+          <button aria-pressed="false" data-v="AAPL">AAPL</button>
+          <button aria-pressed="false" data-v="MSFT">MSFT</button>
+          <button aria-pressed="false" data-v="AMD">AMD</button>
+          <button aria-pressed="false" data-v="SPY">SPY</button>
+        </div>
+      </div>
+      <div class="ctl"><label for="pgExp">Expiry</label>
+        <select id="pgExp"></select>
+      </div>
+      <div class="ctl"><label for="pgStrike">Strike</label>
+        <select id="pgStrike"></select>
+      </div>
+      <div class="ctl"><label>Option type</label>
+        <div class="seg" id="pgType" role="group" aria-label="Call or put">
+          <button aria-pressed="true" data-v="call">Call</button>
+          <button aria-pressed="false" data-v="put">Put</button>
+        </div>
+      </div>
+      <div class="ctl"><label>Your side</label>
+        <div class="seg" id="pgSide" role="group" aria-label="Buy or sell">
+          <button aria-pressed="true" data-v="buy">Buy</button>
+          <button aria-pressed="false" data-v="sell">Sell</button>
+        </div>
+      </div>
+      <div class="ctl"><label for="pgN">Contracts</label>
+        <input type="number" id="pgN" min="1" max="1000" step="1" value="1">
+      </div>
+    </div>
+
+    <div class="tiles">
+      <div class="tile"><div class="t-label">Option price (mid)</div><div class="t-value" id="pgPrem">—</div><div class="t-note" id="pgPremNote"></div></div>
+      <div class="tile"><div class="t-label">Breakeven at expiry</div><div class="t-value" id="pgBE">—</div><div class="t-note" id="pgBENote"></div></div>
+      <div class="tile"><div class="t-label">Max profit</div><div class="t-value" id="pgMaxWin">—</div><div class="t-note" id="pgMaxWinNote"></div></div>
+      <div class="tile"><div class="t-label">Max loss</div><div class="t-value" id="pgMaxLoss">—</div><div class="t-note" id="pgMaxLossNote"></div></div>
+      <div class="tile"><div class="t-label">Acts like</div><div class="t-value" id="pgShares">—</div><div class="t-note">shares right now (delta × 100 × contracts)</div></div>
+    </div>
+
+    <div class="chart" id="pgChart"></div>
+
+    <h3>What if the price moves?</h3>
+    <div class="controls">
+      <div class="ctl"><label for="pgWhatIf">Stock price moves to</label>
+        <input type="range" id="pgWhatIf" min="0" max="1" step="1">
+        <output id="pgWhatIfOut"></output>
+      </div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><div class="t-label">P/L if it jumps there today</div><div class="t-value" id="pgPLNow">—</div><div class="t-note">option re-priced with Black–Scholes at the same IV</div></div>
+      <div class="tile"><div class="t-label">P/L if it's there at expiry</div><div class="t-value" id="pgPLExp">—</div><div class="t-note" id="pgPLExpNote"></div></div>
+      <div class="tile"><div class="t-label">Return on premium</div><div class="t-value" id="pgRet">—</div><div class="t-note" id="pgRetNote"></div></div>
+    </div>
+    <p class="tryit"><b>Try it:</b> buy an NVDA call one strike above the current price, then drag
+    “stock price moves to” up 10%. Notice the green “today” line beats the at-expiry payoff — an
+    early move earns more because time value is still alive. Now switch your side to <b>Sell</b> and
+    watch the same move turn into the dealer’s loss: that mirror image is the whole GEX story from
+    the Guide tab.</p>
+  </div>
+
+  <div class="callout"><span class="kicker">Honest caveats</span>
+  <p>Quotes are real but <b>delayed</b> Cboe mid prices from the snapshot date shown above — not
+  live, and you’d actually trade at bid or ask, not mid. The “today” curve re-prices the option
+  with Black–Scholes (r&nbsp;=&nbsp;0) holding the option’s listed IV constant; in reality IV moves
+  too (that’s vega), especially in a squeeze. Educational only, not investment advice.</p></div>
+</main>
+
 <footer class="site">
-  Built as a single HTML file with zero dependencies. Prices, open interest, and paths are synthetic,
-  computed in your browser with the Black–Scholes model.
+  Built as one HTML file plus a real option-chain snapshot (<code>data.js</code>, delayed Cboe
+  quotes refreshed by <code>refresh_data.py</code>). All pricing math runs in your browser with the
+  Black–Scholes model.
 </footer>
 
+<script src="data.js"></script>
 <script>
 "use strict";
 /* ================================================================
@@ -771,13 +869,15 @@ function renderLineChart(container, cfg) {
   }
 
   /* annotations */
+  const halo = { stroke: T.surface, "stroke-width": 4, "paint-order": "stroke" };
   for (const a of (cfg.annotations || [])) {
     if (a.type === "vline") {
       el("line", { x1: sx(a.x), x2: sx(a.x), y1: M.t, y2: M.t + ih,
         stroke: T.muted, "stroke-width": 1 }, svg);
       if (a.label) {
-        const lb = el("text", { x: sx(a.x), y: M.t - 2, "text-anchor": "middle",
-          "font-size": 11, fill: T.ink2, "font-weight": 600 }, svg);
+        const ly = a.labelPos === "bottom" ? M.t + ih - 6 : M.t - 2;
+        const lb = el("text", { x: sx(a.x), y: ly, "text-anchor": "middle",
+          "font-size": 11, fill: T.ink2, "font-weight": 600, ...halo }, svg);
         lb.textContent = a.label;
       }
     } else if (a.type === "point") {
@@ -787,7 +887,7 @@ function renderLineChart(container, cfg) {
         const anchor = a.anchor || "start";
         const dx = anchor === "start" ? 9 : anchor === "end" ? -9 : 0;
         const lb = el("text", { x: sx(a.x) + dx, y: sy(a.y) + (a.dy != null ? a.dy : 4),
-          "text-anchor": anchor, "font-size": 11.5, fill: T.ink, "font-weight": 600 }, svg);
+          "text-anchor": anchor, "font-size": 11.5, fill: T.ink, "font-weight": 600, ...halo }, svg);
         lb.textContent = a.label;
       }
     } else if (a.type === "series-label") {
@@ -795,7 +895,7 @@ function renderLineChart(container, cfg) {
       el("line", { x1: sx(a.x) - 14, x2: sx(a.x) - 4, y1: sy(a.y), y2: sy(a.y),
         stroke: a.color, "stroke-width": 3, "stroke-linecap": "round" }, svg);
       const lb = el("text", { x: sx(a.x), y: sy(a.y) + 4, "text-anchor": "start",
-        "font-size": 11.5, fill: T.ink, "font-weight": 600 }, svg);
+        "font-size": 11.5, fill: T.ink, "font-weight": 600, ...halo }, svg);
       lb.textContent = a.text;
     }
   }
@@ -1325,18 +1425,201 @@ document.getElementById("simK").addEventListener("input", e => { simState.k = +e
 document.getElementById("simReplay").addEventListener("click", () => { simState.seed = (simState.seed * 1664525 + 1013904223) >>> 0; renderSim(); });
 
 /* ================================================================
-   render everything, and re-render on resize / theme change
+   Playground — real option chains from the data.js snapshot
    ================================================================ */
+const CHAIN = typeof CHAIN_DATA !== "undefined" ? CHAIN_DATA : null;
+const pg = { tk: "NVDA", exp: null, K: null, type: "call", side: "buy", n: 1, whatIf: null };
+const pgExpSel = document.getElementById("pgExp");
+const pgStrikeSel = document.getElementById("pgStrike");
+const pgWhatIf = document.getElementById("pgWhatIf");
+
+function pgDte(exp) { return Math.max(0.5, (new Date(exp + "T16:00:00") - Date.now()) / 86400e3); }
+function pgExpiries(tk) {
+  return Object.keys(CHAIN.tickers[tk].expiries)
+    .filter(e => new Date(e + "T23:59:59") > new Date()).sort();
+}
+function pgRows() { return CHAIN.tickers[pg.tk].expiries[pg.exp][pg.type === "call" ? "C" : "P"]; }
+function pgRow() { return pgRows().find(r => r[0] === pg.K); }
+const fmtPL = v => (v < 0 ? "−$" : "+$") + Math.abs(Math.round(v)).toLocaleString("en-US");
+
+function pgFillExp() {
+  const exps = pgExpiries(pg.tk);
+  if (!exps.includes(pg.exp)) {
+    pg.exp = exps.reduce((a, b) => Math.abs(pgDte(b) - 30) < Math.abs(pgDte(a) - 30) ? b : a, exps[0]);
+  }
+  pgExpSel.textContent = "";
+  for (const e of exps) {
+    const o = document.createElement("option");
+    o.value = e;
+    o.textContent = new Date(e + "T12:00:00").toLocaleDateString("en-US",
+      { month: "short", day: "numeric", year: "numeric" }) + " · " + Math.round(pgDte(e)) + "d";
+    o.selected = e === pg.exp;
+    pgExpSel.appendChild(o);
+  }
+}
+function pgFillStrikes() {
+  const rows = pgRows();
+  const spot = CHAIN.tickers[pg.tk].spot;
+  const target = pg.K != null ? pg.K : spot;
+  pg.K = rows.reduce((a, b) => Math.abs(b[0] - target) < Math.abs(a[0] - target) ? b : a, rows[0])[0];
+  pgStrikeSel.textContent = "";
+  for (const r of rows) {
+    const o = document.createElement("option");
+    o.value = r[0];
+    o.textContent = "$" + r[0] + " · mid $" + r[1].toFixed(2);
+    o.selected = r[0] === pg.K;
+    pgStrikeSel.appendChild(o);
+  }
+}
+function pgSetTicker(tk) {
+  pg.tk = tk; pg.exp = null; pg.K = null;
+  const spot = CHAIN.tickers[tk].spot;
+  pgFillExp(); pgFillStrikes();
+  const step = spot > 500 ? 2 : spot > 150 ? 1 : 0.5;
+  pgWhatIf.min = Math.round(spot * 0.65); pgWhatIf.max = Math.round(spot * 1.35);
+  pgWhatIf.step = step;
+  pg.whatIf = Math.round(spot * 1.1);
+  pgWhatIf.value = pg.whatIf;
+}
+
+function renderPlayground() {
+  const T = tokens();
+  const status = document.getElementById("pgStatus");
+  if (!CHAIN) { status.textContent = "data.js not found — run refresh_data.py to fetch real chains."; return; }
+  const spot = CHAIN.tickers[pg.tk].spot;
+  const row = pgRow();
+  if (!row) { status.textContent = "No usable quote for this option."; return; }
+  const [K, mid, iv, delta] = row;
+  const dte = pgDte(pg.exp), Tyr = dte / 365;
+  const ageDays = Math.round((Date.now() - new Date(CHAIN.asof + "T12:00:00")) / 86400e3);
+  status.textContent = pg.tk + " · price $" + spot.toFixed(2) + " · IV " + Math.round(iv * 100) +
+    "% · real Cboe delayed quotes, snapshot " + CHAIN.asof +
+    (ageDays > 5 ? " (" + ageDays + " days old — run refresh_data.py)" : "");
+
+  const sign = pg.side === "buy" ? 1 : -1;
+  const mult = 100 * pg.n;
+  const premTotal = mid * mult;
+  const isCall = pg.type === "call";
+  const be = isCall ? K + mid : K - mid;
+  const plExp = S => sign * ((isCall ? Math.max(S - K, 0) : Math.max(K - S, 0)) - mid) * mult;
+  const plNow = S => { const v = bs(S, K, Tyr, iv); return sign * ((isCall ? v.call : v.put) - mid) * mult; };
+
+  /* tiles */
+  document.getElementById("pgPrem").textContent = "$" + mid.toFixed(2);
+  document.getElementById("pgPremNote").textContent = "per share · you " +
+    (pg.side === "buy" ? "pay" : "collect") + " " + fmtCompact$(premTotal) +
+    " for " + pg.n + (pg.n === 1 ? " contract" : " contracts");
+  document.getElementById("pgBE").textContent = "$" + be.toFixed(2);
+  document.getElementById("pgBENote").textContent =
+    ((be - spot) / spot * 100).toFixed(1).replace("-", "−") + "% from the current price";
+  const maxWinEl = document.getElementById("pgMaxWin"), maxLossEl = document.getElementById("pgMaxLoss");
+  if (pg.side === "buy") {
+    maxWinEl.textContent = isCall ? "Unlimited" : fmtCompact$((K - mid) * mult);
+    document.getElementById("pgMaxWinNote").textContent = isCall ? "no ceiling above breakeven" : "if the stock goes to $0";
+    maxLossEl.textContent = fmtCompact$(premTotal);
+    document.getElementById("pgMaxLossNote").textContent = "the premium — never more";
+  } else {
+    maxWinEl.textContent = fmtCompact$(premTotal);
+    document.getElementById("pgMaxWinNote").textContent = "the premium you collected";
+    maxLossEl.textContent = isCall ? "Unlimited" : fmtCompact$((K - mid) * mult);
+    document.getElementById("pgMaxLossNote").textContent = isCall ? "no floor — this is the dealer's risk" : "if the stock goes to $0";
+  }
+  const shares = sign * delta * mult;
+  document.getElementById("pgShares").textContent = (shares >= 0 ? "+" : "−") + fmtInt(Math.abs(shares));
+
+  /* what-if tiles */
+  const wi = pg.whatIf;
+  document.getElementById("pgWhatIfOut").textContent = "$" + (+wi).toFixed(2).replace(/\.00$/, "") +
+    " (" + ((wi - spot) / spot * 100 >= 0 ? "+" : "−") + Math.abs((wi - spot) / spot * 100).toFixed(1) + "%)";
+  const plN = plNow(wi), plE = plExp(wi);
+  document.getElementById("pgPLNow").textContent = fmtPL(plN);
+  document.getElementById("pgPLExp").textContent = fmtPL(plE);
+  document.getElementById("pgPLExpNote").textContent = "in " + Math.round(dte) + " days, if it closes at $" + wi;
+  document.getElementById("pgRet").textContent =
+    (plE >= 0 ? "+" : "−") + Math.abs(plE / premTotal * 100).toFixed(0) + "%";
+  document.getElementById("pgRetNote").textContent = "at expiry, on the premium " +
+    (pg.side === "buy" ? "paid" : "collected");
+
+  /* chart */
+  const xs = []; const lo = spot * 0.65, hi = spot * 1.35;
+  for (let i = 0; i <= 240; i++) xs.push(lo + (hi - lo) * i / 240);
+  const nowVals = xs.map(plNow), expVals = xs.map(plExp);
+  let yMin = Math.min(...nowVals, ...expVals), yMax = Math.max(...nowVals, ...expVals);
+  const pad = (yMax - yMin) * 0.08 || 100;
+  yMin = Math.min(yMin - pad, -pad); yMax = Math.max(yMax + pad, pad);
+  renderLineChart(document.getElementById("pgChart"), {
+    height: 330, xDomain: [lo, hi], yDomain: [yMin, yMax], xs,
+    series: [
+      { name: "If it jumps there today", color: T.s1, values: nowVals },
+      { name: "At expiry (" + Math.round(dte) + "d)", color: T.s2, values: expVals }
+    ],
+    fmtX: v => "$" + Math.round(v), ttFmtX: v => "stock at $" + v.toFixed(2),
+    fmtY: fmtCompact$, ttFmtY: fmtPL, zeroLine: true,
+    xLabel: "Stock price", yLabel: "Total profit / loss ($)",
+    ariaLabel: "Profit and loss versus stock price for the selected option position",
+    annotations: [
+      { type: "vline", x: K, label: "strike $" + K },
+      { type: "vline", x: spot, label: "now $" + spot.toFixed(0), labelPos: "bottom" },
+      { type: "point", x: be, y: 0, color: T.s2, label: "breakeven $" + be.toFixed(2),
+        anchor: be > spot * 1.12 ? "end" : "start", dy: -10 },
+      { type: "point", x: wi, y: plN, color: T.s1 },
+      { type: "point", x: wi, y: plE, color: T.s2 }
+    ]
+  });
+}
+
+if (CHAIN) {
+  segWire("pgTicker", "tk", pg, () => { pgSetTicker(pg.tk); renderPlayground(); });
+  segWire("pgType", "type", pg, () => { pgFillStrikes(); renderPlayground(); });
+  segWire("pgSide", "side", pg, renderPlayground);
+  pgExpSel.addEventListener("change", () => { pg.exp = pgExpSel.value; pgFillStrikes(); renderPlayground(); });
+  pgStrikeSel.addEventListener("change", () => { pg.K = +pgStrikeSel.value; renderPlayground(); });
+  document.getElementById("pgN").addEventListener("input", e => {
+    pg.n = Math.max(1, Math.min(1000, Math.round(+e.target.value || 1))); renderPlayground();
+  });
+  pgWhatIf.addEventListener("input", e => { pg.whatIf = +e.target.value; renderPlayground(); });
+  pgSetTicker("NVDA");
+}
+
+/* ================================================================
+   tabs, then render everything; re-render on resize / theme change
+   ================================================================ */
+const tabEls = {
+  guide: document.getElementById("tab-guide"),
+  playground: document.getElementById("tab-playground")
+};
+const tabBar = document.getElementById("tabBar");
+function currentTab() { return tabEls.playground.hidden ? "guide" : "playground"; }
+function showTab(name) {
+  tabEls.guide.hidden = name !== "guide";
+  tabEls.playground.hidden = name !== "playground";
+  tabBar.querySelectorAll("button").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.tab === name)));
+  renderAll();
+}
+tabBar.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+  if (b.dataset.tab === currentTab()) return;
+  location.hash = b.dataset.tab === "playground" ? "#playground" : "#guide";
+}));
+window.addEventListener("hashchange", () => {
+  const h = location.hash;
+  if (h === "#playground") { showTab("playground"); window.scrollTo(0, 0); }
+  else { showTab("guide"); if (h === "" || h === "#guide") window.scrollTo(0, 0); }
+});
+
 function renderAll() {
-  renderPayoff(); renderValue(); renderDelta(); renderGamma();
-  renderHedge(); renderGex(); renderSim();
+  if (!tabEls.guide.hidden) {
+    renderPayoff(); renderValue(); renderDelta(); renderGamma();
+    renderHedge(); renderGex(); renderSim();
+  }
+  if (!tabEls.playground.hidden) renderPlayground();
 }
 let resizeTimer = null;
 window.addEventListener("resize", () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(renderAll, 150);
 });
-renderAll();
+if (location.hash === "#playground") showTab("playground"); else renderAll();
 </script>
 </body>
 </html>

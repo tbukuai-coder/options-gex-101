@@ -1,14 +1,37 @@
 # Options, Gamma & GEX — a visual guide for beginners
 
-A single-file, zero-dependency HTML explainer that builds up — from nothing — how stock
+A zero-dependency HTML explainer that builds up — from nothing — how stock
 options work and how option **dealer hedging** feeds back into the stock market itself:
 delta, gamma, **GEX (gamma exposure)**, the gamma flip, gamma squeezes, OPEX pinning,
-and the 0DTE era.
+and the 0DTE era. Two tabs:
+
+- **📖 Guide** — the eight-section interactive course (all data synthetic).
+- **🧪 Playground** — build a real position from real (delayed) option chains: pick
+  NVDA / TSLA / AAPL / MSFT / AMD / SPY, a listed expiry and strike, buy or sell a
+  call or put, and see total P/L vs. stock price — both "if it jumps there today"
+  (Black–Scholes re-pricing at the option's listed IV) and at expiry — plus breakeven,
+  max profit/loss, share-equivalent delta, and a what-if price slider.
 
 ## Run it
 
-Open `index.html` in any browser. No server, no build step, no network — all math
-(Black–Scholes with r = 0) runs inline in vanilla JavaScript.
+Open `index.html` in any browser (works over `file://` — the chain snapshot loads via
+`<script src="data.js">`, no fetch). No server, no build step; all math (Black–Scholes
+with r = 0) runs inline in vanilla JavaScript.
+
+## Real data (`data.js`)
+
+`data.js` holds real **delayed Cboe quotes** (`cdn.cboe.com` delayed-quotes API):
+per ticker, the expiries nearest 7/30/60/120/240 DTE and strikes within ±30% of spot,
+each as `[strike, mid, iv, delta]`. Regenerate with:
+
+```bash
+python3 refresh_data.py   # stdlib only, no pip installs
+```
+
+A GitHub Action (`.github/workflows/refresh-data.yml`) reruns this on weekday evenings
+(US close) and commits when the data changes; the script aborts non-zero on any sanity
+failure so a broken snapshot never lands. The Cboe API is not CORS-enabled, which is
+why the page uses a committed snapshot instead of fetching live in the browser.
 
 ## What's inside
 
@@ -23,6 +46,7 @@ Open `index.html` in any browser. No server, no build step, no network — all m
 | 7 | Market regimes | Seeded simulation: identical shocks through positive-GEX (dampened) vs. negative-GEX (amplified) hedging feedback, with realized-vol tiles |
 | 8 | In the wild | GameStop gamma squeeze, OPEX pinning, 0DTE, where GEX dashboards live |
 | — | Glossary + caveats | Every term used, plus an honest list of the model's simplifications |
+| 🧪 | Playground tab | Real-chain position builder: ticker/expiry/strike selectors, buy/sell × call/put, contracts, P/L-today + P/L-at-expiry chart, what-if slider |
 
 ## Implementation notes
 
