@@ -164,6 +164,10 @@ button.plain {
   border-radius: 8px; padding: 6px 14px; font: inherit; font-size: 13.5px; cursor: pointer;
 }
 button.plain:hover { border-color: var(--baseline); }
+#tmCases button.plain[aria-pressed="true"] {
+  border-color: var(--series-1); color: var(--series-1);
+  background: var(--accent-wash); font-weight: 600;
+}
 
 /* ---------- charts ---------- */
 .chart-card { position: relative; }
@@ -797,6 +801,22 @@ sliders and watch the curves respond.</p>
   <p class="lead">Jump to a random <b>real historical day</b> — for example an actual NVDA earnings
   report date — see only the price chart <i>up to that day</i>, place an option trade, then hit
   reveal and watch what really happened to the stock and to your P/L.</p>
+
+  <div class="card">
+    <p class="chart-title">🎬 Earnings-season playbook — five sample cases</p>
+    <p class="chart-sub">The classic ways traders play a report. Each button deals a real past
+    earnings date for the chosen stock and pre-builds the trade — read the note, study the setup
+    below, then hit ▶ Reveal. Deal a few of each: the lesson is in the distribution, not one
+    reveal.</p>
+    <div class="controls" id="tmCases">
+      <button class="plain" data-case="vol-buyer">📣 The vol buyer</button>
+      <button class="plain" data-case="vol-seller">🤫 The vol seller</button>
+      <button class="plain" data-case="bull">🚀 The directional bull</button>
+      <button class="plain" data-case="holder">🛡 The nervous holder</button>
+      <button class="plain" data-case="income">💰 The income collector</button>
+    </div>
+    <p class="tryit" id="tmCaseNote" hidden></p>
+  </div>
 
   <div class="card chart-card">
     <p class="chart-title">1 · Get a moment in history</p>
@@ -2345,6 +2365,70 @@ function tmSyncControls() {
   document.getElementById("tmMoneyLabel").textContent = multi ? "Center strike" : "Strike";
 }
 
+/* ---- earnings-season playbook: one-click sample cases ---- */
+const TM_CASES = {
+  "vol-buyer": { strat: "straddle", expOff: 10, w: 5,
+    note: "<b>📣 The vol buyer — long straddle into the print.</b> The thesis: this report will" +
+      " move the stock more than the market expects, direction unknown — so buy the at-the-money" +
+      " call <i>and</i> put expiring ≈2 weeks after the report. <b>What to watch:</b> both premiums" +
+      " carry the pre-earnings markup (+35% here, mirroring how real IV inflates before a report)." +
+      " The stock must clear <i>both</i> breakevens; deal several reveals and count how often a" +
+      " decent-looking move still loses money once the fat premiums are paid. That is the" +
+      " earnings <b>IV-crush</b> lesson in miniature." },
+  "vol-seller": { strat: "iron-condor", expOff: 21, w: 5,
+    note: "<b>🤫 The vol seller — iron condor over the report.</b> The thesis: pre-earnings options" +
+      " are systematically overpriced because everyone fears the move — so sell an out-of-the-money" +
+      " put spread and call spread and pocket the inflated credit. <b>What to watch:</b> this trade" +
+      " wins small and often… until a blowout quarter lands on a wing for the max loss. Deal enough" +
+      " reveals (TSLA is a good stress test) to meet the tail. When people say “volatility" +
+      " sellers got run over”, this is the position they mean." },
+  "bull": { strat: "bull-call", expOff: 21, w: 5,
+    note: "<b>🚀 The directional bull — call spread on a beat.</b> The thesis: you expect good" +
+      " numbers, but outright calls are at their most expensive right before a report. A bull call" +
+      " spread sells someone else the same inflated premium you are paying, cutting the cost of the" +
+      " bet in exchange for a capped win. <b>What to watch:</b> compare the same reveal against a" +
+      " single bought call (switch the strategy back after revealing) — when IV is pumped," +
+      " capped-but-cheap often beats unlimited-but-pricey." },
+  "holder": { strat: "protective-put", expOff: 42, w: 5,
+    note: "<b>🛡 The nervous holder — protective put through the print.</b> The thesis: you own 100" +
+      " shares, you want to stay for the long run, but a bad report could hurt — so buy a put ~5%" +
+      " below the market as insurance. <b>What to watch:</b> insurance costs the most exactly when" +
+      " you want it (the pre-earnings markup again). On calm reports the put expires worthless —" +
+      " that quiet bleed is the price of sleeping well, and it is why put-heavy strikes below the" +
+      " market are a permanent feature of GEX charts." },
+  "income": { strat: "covered-call", expOff: 21, w: 5,
+    note: "<b>💰 The income collector — covered call into the report.</b> The thesis: keep the" +
+      " shares through earnings but sell the pumped-up call above the market — earnings week is" +
+      " when call premium is richest, and most reports do not produce a moonshot. <b>What to" +
+      " watch:</b> on a monster beat your upside stops at the short strike (in real life the shares" +
+      " get “called away”). The richer the premium you collected, the more the market" +
+      " feared exactly that outcome." }
+};
+function tmSetSeg(id, val) {
+  document.querySelectorAll("#" + id + " button").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.v === val)));
+}
+function tmClearCase() {
+  document.querySelectorAll("#tmCases button").forEach(b => b.setAttribute("aria-pressed", "false"));
+  document.getElementById("tmCaseNote").hidden = true;
+}
+function tmLoadCase(key) {
+  const c = TM_CASES[key];
+  if (tm.tk === "SPY") { tm.tk = "NVDA"; tmSetSeg("tmTicker", "NVDA"); } // ETF has no earnings
+  tm.mode = "earnings"; tmSetSeg("tmMode", "earnings");
+  tm.strat = c.strat;
+  document.getElementById("tmStrat").value = c.strat;
+  tm.money = 0; tm.w = c.w; tm.expOff = c.expOff; tm.n = 1;
+  document.getElementById("tmN").value = 1;
+  tmSyncControls();
+  tmPick();
+  const note = document.getElementById("tmCaseNote");
+  note.innerHTML = c.note; note.hidden = false;
+  document.querySelectorAll("#tmCases button").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.case === key)));
+  renderTimeMachine();
+}
+
 function tileSign(id, text, v) {
   const e2 = document.getElementById(id);
   e2.textContent = text;
@@ -2590,13 +2674,15 @@ function tmPosChanged() {
 }
 if (HIST) {
   tmDateIdx = new Map(HIST.dates.map((d, i) => [d, i]));
-  segWire("tmTicker", "tk", tm, () => { tmPick(); renderTimeMachine(); });
-  segWire("tmMode", "mode", tm, () => { tmPick(); renderTimeMachine(); });
-  document.getElementById("tmNew").addEventListener("click", () => { tmPick(); renderTimeMachine(); });
+  segWire("tmTicker", "tk", tm, () => { tmClearCase(); tmPick(); renderTimeMachine(); });
+  segWire("tmMode", "mode", tm, () => { tmClearCase(); tmPick(); renderTimeMachine(); });
+  document.getElementById("tmNew").addEventListener("click", () => { tmClearCase(); tmPick(); renderTimeMachine(); });
+  document.querySelectorAll("#tmCases button").forEach(b =>
+    b.addEventListener("click", () => tmLoadCase(b.dataset.case)));
   segWire("tmType", "type", tm, tmPosChanged);
   segWire("tmSide", "side", tm, tmPosChanged);
   document.getElementById("tmStrat").addEventListener("change", e2 => {
-    tm.strat = e2.target.value; tmSyncControls(); tmPosChanged();
+    tm.strat = e2.target.value; tmClearCase(); tmSyncControls(); tmPosChanged();
   });
   document.getElementById("tmWidth").addEventListener("change", e2 => { tm.w = +e2.target.value; tmPosChanged(); });
   document.getElementById("tmMoney").addEventListener("change", e2 => {
