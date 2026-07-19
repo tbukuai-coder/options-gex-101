@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Options, Gamma &amp; GEX — a visual guide for beginners</title>
+<style>
+/* ---------- theme tokens (light default, dark via media query or data-theme) ---------- */
+:root {
+  color-scheme: light;
+  --page:        #f9f9f7;
+  --surface:     #fcfcfb;
+  --ink:         #0b0b0b;
+  --ink-2:       #52514e;
+  --muted:       #898781;
+  --grid:        #e1e0d9;
+  --baseline:    #c3c2b7;
+  --border:      rgba(11,11,11,0.10);
+  --series-1:    #2a78d6;  /* blue   */
+  --series-2:    #008300;  /* green  */
+  --series-3:    #e87ba4;  /* magenta */
+  --div-pos:     #2a78d6;  /* diverging + pole (blue) */
+  --div-neg:     #e34948;  /* diverging − pole (red)  */
+  --div-mid:     #f0efec;
+  --accent-wash: rgba(42,120,214,0.10);
+}
+:root[data-theme="dark"] { color-scheme: dark; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page:        #0d0d0d;
+    --surface:     #1a1a19;
+    --ink:         #ffffff;
+    --ink-2:       #c3c2b7;
+    --muted:       #898781;
+    --grid:        #2c2c2a;
+    --baseline:    #383835;
+    --border:      rgba(255,255,255,0.10);
+    --series-1:    #3987e5;
+    --series-2:    #008300;
+    --series-3:    #d55181;
+    --div-pos:     #3987e5;
+    --div-neg:     #e66767;
+    --div-mid:     #383835;
+    --accent-wash: rgba(57,135,229,0.12);
+  }
+}
+:root[data-theme="dark"] {
+  --page:        #0d0d0d;
+  --surface:     #1a1a19;
+  --ink:         #ffffff;
+  --ink-2:       #c3c2b7;
+  --muted:       #898781;
+  --grid:        #2c2c2a;
+  --baseline:    #383835;
+  --border:      rgba(255,255,255,0.10);
+  --series-1:    #3987e5;
+  --series-2:    #008300;
+  --series-3:    #d55181;
+  --div-pos:     #3987e5;
+  --div-neg:     #e66767;
+  --div-mid:     #383835;
+  --accent-wash: rgba(57,135,229,0.12);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.6;
+  font-size: 16px;
+}
+
+/* ---------- layout ---------- */
+header.site {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px;
+  background: color-mix(in srgb, var(--page) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+header.site .brand { font-weight: 700; font-size: 15px; }
+header.site .brand span { color: var(--muted); font-weight: 400; }
+main { max-width: 880px; margin: 0 auto; padding: 24px 20px 80px; }
+section { margin: 56px 0; scroll-margin-top: 72px; }
+h1 { font-size: clamp(28px, 5vw, 40px); line-height: 1.15; margin: 24px 0 12px; }
+h2 { font-size: 24px; margin: 0 0 6px; }
+h2 .num { color: var(--muted); font-weight: 600; margin-right: 8px; }
+h3 { font-size: 17px; margin: 22px 0 6px; }
+p { margin: 10px 0; color: var(--ink); }
+p.lead { font-size: 18px; color: var(--ink-2); }
+.sub { color: var(--ink-2); }
+a { color: var(--series-1); }
+code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; }
+
+.toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 6px; }
+.toc a {
+  text-decoration: none; color: var(--ink-2);
+  border: 1px solid var(--border); border-radius: 999px;
+  padding: 5px 12px; font-size: 13.5px; background: var(--surface);
+}
+.toc a:hover { color: var(--ink); border-color: var(--baseline); }
+
+/* ---------- cards & callouts ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin: 16px 0;
+}
+.callout {
+  border-left: 3px solid var(--series-1);
+  background: var(--accent-wash);
+  border-radius: 0 10px 10px 0;
+  padding: 10px 16px; margin: 16px 0;
+}
+.callout .kicker { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.tryit { font-size: 14px; color: var(--ink-2); margin-top: 10px; }
+.tryit b { color: var(--ink); }
+
+/* ---------- controls ---------- */
+.controls {
+  display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: flex-end;
+  margin: 4px 0 14px;
+}
+.ctl { display: flex; flex-direction: column; gap: 4px; min-width: 130px; }
+.ctl label { font-size: 12.5px; color: var(--ink-2); }
+.ctl output { font-size: 13.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 150px; accent-color: var(--series-1); }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.seg button {
+  border: 0; background: transparent; color: var(--ink-2);
+  padding: 6px 14px; font: inherit; font-size: 13.5px; cursor: pointer;
+}
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button[aria-pressed="true"] { background: var(--series-1); color: #fff; font-weight: 600; }
+button.plain {
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+  border-radius: 8px; padding: 6px 14px; font: inherit; font-size: 13.5px; cursor: pointer;
+}
+button.plain:hover { border-color: var(--baseline); }
+
+/* ---------- charts ---------- */
+.chart-card { position: relative; }
+.chart-title { font-size: 14px; font-weight: 600; margin: 0 0 2px; }
+.chart-sub { font-size: 12.5px; color: var(--muted); margin: 0 0 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 4px 0 8px; font-size: 12.5px; color: var(--ink-2); }
+.legend .key { display: inline-flex; align-items: center; gap: 6px; }
+.legend .swatch-line { width: 16px; height: 0; border-top: 3px solid; border-radius: 2px; display: inline-block; }
+.legend .swatch-rect { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.chart { position: relative; width: 100%; }
+.chart svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+.chart svg:focus-visible { outline: 2px solid var(--series-1); outline-offset: 2px; border-radius: 8px; }
+.tooltip {
+  position: absolute; pointer-events: none; z-index: 10;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.14);
+  padding: 7px 10px; font-size: 12.5px; min-width: 120px;
+  opacity: 0; transition: opacity 0.08s;
+}
+.tooltip.show { opacity: 1; }
+.tooltip .tt-x { color: var(--muted); font-size: 11.5px; margin-bottom: 3px; }
+.tooltip .tt-row { display: flex; align-items: center; gap: 7px; margin: 2px 0; }
+.tooltip .tt-key { width: 12px; height: 0; border-top: 3px solid; border-radius: 2px; flex: none; }
+.tooltip .tt-val { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tooltip .tt-name { color: var(--ink-2); }
+
+/* ---------- stat tiles ---------- */
+.tiles { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; }
+.tile {
+  flex: 1 1 150px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 14px;
+}
+.tile .t-label { font-size: 12px; color: var(--ink-2); }
+.tile .t-value { font-size: 22px; font-weight: 600; margin-top: 2px; }
+.tile .t-note { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+/* ---------- dealer flow diagram ---------- */
+.flow { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; margin: 18px 0; }
+.flow .node {
+  flex: 1 1 140px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 14px; text-align: center;
+}
+.flow .node b { display: block; font-size: 15px; }
+.flow .node span { font-size: 12.5px; color: var(--ink-2); }
+.flow .arrow {
+  flex: 0 0 auto; align-self: center; padding: 0 10px; text-align: center;
+  color: var(--ink-2); font-size: 12px; min-width: 96px;
+}
+.flow .arrow .glyph { font-size: 20px; color: var(--series-1); display: block; line-height: 1; }
+@media (max-width: 620px) {
+  .flow { flex-direction: column; }
+  .flow .arrow .glyph { transform: rotate(90deg); }
+}
+
+/* ---------- table view ---------- */
+details.tableview { margin-top: 10px; }
+details.tableview summary { cursor: pointer; font-size: 13px; color: var(--ink-2); }
+details.tableview table { border-collapse: collapse; margin-top: 8px; font-size: 13px; width: 100%; }
+details.tableview th, details.tableview td {
+  border-bottom: 1px solid var(--grid); padding: 4px 10px; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+details.tableview th { color: var(--ink-2); font-weight: 600; }
+details.tableview th:first-child, details.tableview td:first-child { text-align: left; }
+
+/* ---------- glossary ---------- */
+dl.glossary { margin: 0; }
+dl.glossary dt { font-weight: 700; margin-top: 12px; }
+dl.glossary dd { margin: 2px 0 0 0; color: var(--ink-2); }
+
+footer.site { max-width: 880px; margin: 0 auto; padding: 0 20px 40px; color: var(--muted); font-size: 13px; }
+hr { border: 0; border-top: 1px solid var(--border); margin: 40px 0; }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="brand">Options, Gamma &amp; GEX <span>· a visual guide</span></div>
+  <button class="plain" id="themeToggle" aria-label="Toggle color theme">◐ Theme</button>
+</header>
+
+<main>
+
+<h1>How options quietly move the stock market</h1>
+<p class="lead">You have probably heard traders talk about <b>gamma squeezes</b>, <b>0DTE</b>, or
+"<b>dealers are short gamma</b>". This page builds those ideas from zero — what an option is, what
+delta and gamma mean, and how the hedging done by option dealers (<b>GEX</b>, gamma exposure) can
+calm the market on some days and amplify it on others. Every chart below is interactive: drag the
+sliders and watch the curves respond.</p>
+
+<div class="toc">
+  <a href="#s1">1 · What is an option?</a>
+  <a href="#s2">2 · Price before expiry</a>
+  <a href="#s3">3 · Delta</a>
+  <a href="#s4">4 · Gamma</a>
+  <a href="#s5">5 · Dealers &amp; hedging</a>
+  <a href="#s6">6 · GEX</a>
+  <a href="#s7">7 · Market regimes</a>
+  <a href="#s8">8 · In the wild</a>
+  <a href="#glossary">Glossary</a>
+</div>
+
+<!-- ================= 1. WHAT IS AN OPTION ================= -->
+<section id="s1">
+  <h2><span class="num">1</span>What is an option?</h2>
+  <p>An <b>option</b> is a contract on a stock. A <b>call</b> gives you the right (not the
+  obligation) to <i>buy</i> the stock at a fixed price — the <b>strike</b> — before an
+  <b>expiry date</b>. A <b>put</b> gives you the right to <i>sell</i> at the strike. You pay a
+  <b>premium</b> up front for that right. One contract covers 100 shares; the charts here show
+  per-share dollars to keep the numbers small.</p>
+  <p>The classic way to see an option is its <b>payoff at expiry</b>: for every possible stock
+  price on expiry day, what did you make or lose?</p>
+
+  <div class="card chart-card">
+    <p class="chart-title">Profit / loss at expiry (per share)</p>
+    <p class="chart-sub" id="payoffSub"></p>
+    <div class="controls">
+      <div class="ctl"><label>Option type</label>
+        <div class="seg" id="payoffType" role="group" aria-label="Option type">
+          <button aria-pressed="true" data-v="call">Call</button>
+          <button aria-pressed="false" data-v="put">Put</button>
+        </div>
+      </div>
+      <div class="ctl"><label>Your side</label>
+        <div class="seg" id="payoffSide" role="group" aria-label="Buy or sell">
+          <button aria-pressed="true" data-v="buy">Buy</button>
+          <button aria-pressed="false" data-v="sell">Sell</button>
+        </div>
+      </div>
+      <div class="ctl"><label for="payoffK">Strike</label>
+        <input type="range" id="payoffK" min="80" max="120" step="1" value="100">
+        <output id="payoffKOut"></output>
+      </div>
+      <div class="ctl"><label for="payoffPrem">Premium paid</label>
+        <input type="range" id="payoffPrem" min="1" max="15" step="0.5" value="5">
+        <output id="payoffPremOut"></output>
+      </div>
+    </div>
+    <div class="chart" id="payoffChart"></div>
+    <p class="tryit"><b>Try it:</b> buy a call with strike $100 and premium $5. Below $100 you lose
+    exactly the $5 premium — never more. Above $105 (the <b>breakeven</b>, marked on the chart) you
+    profit dollar-for-dollar. Now flip to <b>Sell</b>: the picture mirrors — the seller keeps the
+    premium in the flat zone but has open-ended risk on the other side. That seller is usually a
+    <b>dealer</b>, and their risk is what the rest of this page is about.</p>
+  </div>
+
+  <div class="callout"><span class="kicker">Key idea</span>
+  <p>Options have <b>asymmetric</b> payoffs: limited loss on one side, open-ended exposure on the
+  other. Whoever sells you that asymmetry has to manage it — by trading the stock itself.</p></div>
+</section>
+
+<!-- ================= 2. PRICE BEFORE EXPIRY ================= -->
+<section id="s2">
+  <h2><span class="num">2</span>What is an option worth <i>before</i> expiry?</h2>
+  <p>Before expiry, an option is worth more than its immediate exercise value, because the stock
+  still has time to move. The market prices this with models like <b>Black–Scholes</b>, which turn
+  time-to-expiry and expected wobble (<b>implied volatility</b>, IV) into a smooth curve. The gap
+  between the curve and the kinked expiry payoff is <b>time value</b>.</p>
+
+  <div class="card chart-card">
+    <p class="chart-title">Call option value vs. stock price (strike $100)</p>
+    <p class="chart-sub" id="valueSub"></p>
+    <div class="controls">
+      <div class="ctl"><label for="valueIV">Implied volatility</label>
+        <input type="range" id="valueIV" min="10" max="100" step="1" value="25">
+        <output id="valueIVOut"></output>
+      </div>
+      <div class="ctl"><label for="valueDTE">Days to expiry</label>
+        <input type="range" id="valueDTE" min="1" max="365" step="1" value="60">
+        <output id="valueDTEOut"></output>
+      </div>
+    </div>
+    <div class="chart" id="valueChart"></div>
+    <p class="tryit"><b>Try it:</b> drag <b>days to expiry</b> down to 1. The smooth curve collapses
+    onto the kink — time value melts away (that decay is “theta”). Now push IV up: more expected
+    movement makes every option worth more, especially near the strike.</p>
+  </div>
+</section>
+
+<!-- ================= 3. DELTA ================= -->
+<section id="s3">
+  <h2><span class="num">3</span>Delta: the option’s “share equivalent”</h2>
+  <p><b>Delta</b> is the slope of the value curve you just saw: how much the option’s price changes
+  when the stock moves $1. A call with delta 0.50 behaves, for small moves, like holding
+  <b>50 shares</b> per contract. Deltas run from 0 to 1 for calls and 0 to −1 for puts.</p>
+
+  <div class="card chart-card">
+    <p class="chart-title">Delta vs. stock price (strike $100)</p>
+    <p class="chart-sub" id="deltaSub"></p>
+    <div class="controls">
+      <div class="ctl"><label for="deltaDTE">Days to expiry</label>
+        <input type="range" id="deltaDTE" min="1" max="180" step="1" value="30">
+        <output id="deltaDTEOut"></output>
+      </div>
+    </div>
+    <div class="chart" id="deltaChart"></div>
+    <p class="tryit"><b>Try it:</b> shrink days to expiry. The call’s delta curve steepens into a
+    step: far from the strike an option is either “certainly worthless” (delta 0) or “certainly
+    stock” (delta 1), and near the strike it flips faster and faster. <b>That steepness is
+    gamma</b> — the next section.</p>
+  </div>
+
+  <div class="callout"><span class="kicker">Why delta matters for the market</span>
+  <p>Anyone who sold you an option can neutralize their <i>directional</i> risk by holding
+  <b>delta × 100 shares</b> against each contract. This is called <b>delta hedging</b>, and dealers
+  do it constantly. The catch: delta doesn’t sit still.</p></div>
+</section>
+
+<!-- ================= 4. GAMMA ================= -->
+<section id="s4">
+  <h2><span class="num">4</span>Gamma: how fast delta changes</h2>
+  <p><b>Gamma</b> is the rate of change of delta per $1 move in the stock. High gamma means a
+  dealer’s hedge goes stale quickly — every move in the stock forces them to re-trade. Gamma is
+  largest <b>at the strike</b> (where the “maybe” is most uncertain) and explodes as expiry
+  approaches.</p>
+
+  <div class="card chart-card">
+    <p class="chart-title">Gamma vs. stock price (strike $100, IV 25%)</p>
+    <p class="chart-sub">Gamma = change in delta per $1 stock move · same option, three expiries</p>
+    <div class="chart" id="gammaChart"></div>
+    <p class="tryit"><b>Read it:</b> with 30 days left, gamma is a gentle hill. With 1 day left it is
+    a spike: near the strike, a $1 move can swing delta by 0.20 or more. This is why expiry days
+    (and 0DTE options) generate so much forced hedging — tiny stock moves demand big hedge
+    adjustments.</p>
+  </div>
+</section>
+
+<!-- ================= 5. DEALERS & DELTA HEDGING ================= -->
+<section id="s5">
+  <h2><span class="num">5</span>Dealers: the hedging machine on the other side</h2>
+  <p>When you buy a call, someone sells it — usually a <b>market maker (dealer)</b> whose job is
+  to earn the bid–ask spread, not to bet on direction. So the dealer immediately hedges:</p>
+
+  <div class="flow" aria-label="Dealer hedging flow">
+    <div class="node"><b>You</b><span>buy 10 call contracts<br>(strike $100)</span></div>
+    <div class="arrow"><span class="glyph">→</span>dealer sells<br>the calls</div>
+    <div class="node"><b>Dealer</b><span>now short 10 calls<br>= short ~500 “share equivalents”</span></div>
+    <div class="arrow"><span class="glyph">→</span>dealer buys<br>~500 shares</div>
+    <div class="node"><b>Stock market</b><span>real shares bought<br>to neutralize delta</span></div>
+  </div>
+
+  <p>So far so good — the dealer is flat. But gamma means the hedge <b>drifts</b>. The dealer who is
+  <i>short</i> the call must keep chasing: as the stock rises, the call’s delta rises, so the dealer
+  must <b>buy more shares into strength</b>; when it falls back, they <b>sell into weakness</b>.
+  Their hedging trades push <i>in the same direction</i> as the market move.</p>
+
+  <div class="card chart-card">
+    <p class="chart-title">Shares the dealer must hold to stay hedged</p>
+    <p class="chart-sub">Dealer short 10 calls · strike $100 · 30 days · IV 25% · hedge = delta × 1,000 shares</p>
+    <div class="controls">
+      <div class="ctl"><label for="hedgeSpot">Stock price now</label>
+        <input type="range" id="hedgeSpot" min="85" max="115" step="0.5" value="100">
+        <output id="hedgeSpotOut"></output>
+      </div>
+    </div>
+    <div class="chart" id="hedgeChart"></div>
+    <div class="tiles">
+      <div class="tile"><div class="t-label">Hedge held right now</div><div class="t-value" id="hedgeNow">—</div><div class="t-note">shares</div></div>
+      <div class="tile"><div class="t-label">If the stock rises $2</div><div class="t-value" id="hedgeUp">—</div><div class="t-note">shares the dealer must BUY</div></div>
+      <div class="tile"><div class="t-label">If the stock falls $2</div><div class="t-value" id="hedgeDown">—</div><div class="t-note">shares the dealer must SELL</div></div>
+    </div>
+    <p class="tryit"><b>Try it:</b> park the price at the $100 strike, where the curve is steepest
+    (that’s peak gamma). The tiles show the forced re-hedge for a $2 move — buying rises, selling
+    dips. Multiply this by millions of contracts and hedging becomes a real force in the market.</p>
+  </div>
+
+  <div class="callout"><span class="kicker">The two regimes</span>
+  <p>Direction is everything. A dealer who is <b>short options (short gamma)</b> hedges
+  <i>with</i> the market — buying rallies, selling dips — which <b>amplifies</b> moves. A dealer who
+  is <b>long options (long gamma)</b> hedges <i>against</i> the market — selling rallies, buying
+  dips — which <b>dampens</b> moves. To know which force dominates, we add up gamma across all
+  options that exist. That sum is <b>GEX</b>.</p></div>
+</section>
+
+<!-- ================= 6. GEX ================= -->
+<section id="s6">
+  <h2><span class="num">6</span>GEX: gamma exposure, added up</h2>
+  <p><b>GEX (gamma exposure)</b> estimates, for every strike, how many dollars of stock dealers must
+  trade per 1% market move, given the <b>open interest</b> (contracts outstanding) at that strike.
+  One problem: nobody publishes which side dealers are actually on. So the standard quick estimate
+  assumes typical customer behavior — investors like to <i>sell covered calls</i> for income and
+  <i>buy protective puts</i> for insurance. Dealers take the other side of both, ending up
+  <b>long calls (positive gamma)</b> and <b>short puts (negative gamma)</b>. It’s a crude
+  assumption, but it makes a useful map:</p>
+
+  <div class="card chart-card">
+    <p class="chart-title">Dealer gamma exposure by strike ($ per 1% move)</p>
+    <p class="chart-sub" id="gexSub"></p>
+    <div class="controls">
+      <div class="ctl"><label>View</label>
+        <div class="seg" id="gexMode" role="group" aria-label="GEX view">
+          <button aria-pressed="true" data-v="split">Calls &amp; puts</button>
+          <button aria-pressed="false" data-v="net">Net</button>
+        </div>
+      </div>
+      <div class="ctl"><label for="gexSpot">Stock price now</label>
+        <input type="range" id="gexSpot" min="82" max="118" step="0.5" value="100">
+        <output id="gexSpotOut"></output>
+      </div>
+    </div>
+    <div class="chart" id="gexChart"></div>
+    <div class="tiles">
+      <div class="tile"><div class="t-label">Total net GEX</div><div class="t-value" id="gexTotal">—</div><div class="t-note">$ dealers trade per 1% move (+ = stabilizing)</div></div>
+      <div class="tile"><div class="t-label">Estimated gamma flip</div><div class="t-value" id="gexFlip">—</div><div class="t-note">net GEX crosses zero near this price</div></div>
+    </div>
+    <details class="tableview"><summary>View the data as a table</summary>
+      <table id="gexTable"><thead><tr><th>Strike</th><th>Call GEX ($M)</th><th>Put GEX ($M)</th><th>Net ($M)</th></tr></thead><tbody></tbody></table>
+    </details>
+    <p class="tryit"><b>Try it:</b> drag the price down toward the put-heavy strikes. Total net GEX
+    flips negative — the market has crossed the <b>gamma flip</b> level into the unstable regime.
+    Drag it back up among the call strikes and net GEX turns positive again. Real GEX dashboards
+    (published daily by several research shops) show exactly this picture for the S&amp;P 500.</p>
+  </div>
+
+  <div class="callout"><span class="kicker">How to read a GEX chart</span>
+  <p><b>Above the flip (net GEX positive):</b> dealers are long gamma — their hedging leans against
+  moves, volatility gets suppressed, price tends to “pin” near big strikes.
+  <b>Below the flip (net GEX negative):</b> dealers are short gamma — hedging chases moves, selling
+  begets selling, and volatility expands. That’s why the flip level is watched like a tripwire.</p></div>
+</section>
+
+<!-- ================= 7. REGIMES SIMULATION ================= -->
+<section id="s7">
+  <h2><span class="num">7</span>See it: the same market in two regimes</h2>
+  <p>Here is a toy simulation. All three paths get the <b>identical sequence of random news
+  shocks</b>. The only difference is the hedging feedback: in the positive-GEX world, dealers trade
+  <i>against</i> each move and absorb part of it; in the negative-GEX world they <i>chase</i> each
+  move — and keep chasing yesterday’s — so shocks get stretched into trends.</p>
+
+  <div class="card chart-card">
+    <p class="chart-title">Simulated price paths, identical shocks</p>
+    <p class="chart-sub">130 trading days · toy model: long-gamma hedging absorbs part of each move, short-gamma hedging chases it</p>
+    <div class="controls">
+      <div class="ctl"><label for="simK">Hedging feedback strength</label>
+        <input type="range" id="simK" min="0" max="0.8" step="0.05" value="0.45">
+        <output id="simKOut"></output>
+      </div>
+      <div class="ctl"><label>&nbsp;</label>
+        <button class="plain" id="simReplay">↻ New random shocks</button>
+      </div>
+    </div>
+    <div class="chart" id="simChart"></div>
+    <div class="tiles">
+      <div class="tile"><div class="t-label">Realized volatility — no hedging</div><div class="t-value" id="simVol0">—</div><div class="t-note">annualized</div></div>
+      <div class="tile"><div class="t-label">Positive GEX world</div><div class="t-value" id="simVolPos">—</div><div class="t-note">hedging dampens · lower vol</div></div>
+      <div class="tile"><div class="t-label">Negative GEX world</div><div class="t-value" id="simVolNeg">—</div><div class="t-note">hedging amplifies · higher vol</div></div>
+    </div>
+    <p class="tryit"><b>Try it:</b> crank the feedback to 0.8 and replay a few times. Same news,
+    wildly different markets: the positive-GEX path grinds quietly while the negative-GEX path
+    swings in exaggerated waves. This is a cartoon — real hedging is intraday and continuous — but
+    the mechanism is the real one.</p>
+  </div>
+</section>
+
+<!-- ================= 8. IN THE WILD ================= -->
+<section id="s8">
+  <h2><span class="num">8</span>Where you’ve seen this in the wild</h2>
+
+  <div class="card">
+    <h3>🚀 The gamma squeeze (GameStop, January 2021)</h3>
+    <p>Crowds bought huge volumes of short-dated out-of-the-money <b>calls</b>. Dealers who sold
+    them were short gamma and had to buy shares as the price rose — which pushed the price higher,
+    raising the calls’ deltas, forcing <i>more</i> buying. The hedging loop itself became the rally.
+    That feedback spiral is a <b>gamma squeeze</b>.</p>
+  </div>
+
+  <div class="card">
+    <h3>📌 OPEX pinning</h3>
+    <p>On big monthly expiration days (“OPEX”), strikes with heavy open interest act like magnets
+    when dealers are long gamma: every drift away from the strike triggers hedging that nudges the
+    price back. Markets often go strangely quiet and “pin” to round numbers like 100 — then move
+    freely again once the options expire and the gamma vanishes.</p>
+  </div>
+
+  <div class="card">
+    <h3>⚡ The 0DTE era</h3>
+    <p>Options expiring the <i>same day</i> (zero days to expiry) now make up a large share of
+    S&amp;P 500 option volume. Remember the 1-day gamma spike from section 4: 0DTE options carry
+    enormous gamma concentrated at the money, so intraday hedging flows have become a bigger driver
+    of intraday market behavior than ever.</p>
+  </div>
+
+  <div class="card">
+    <h3>🗺️ Where people watch this</h3>
+    <p>Several research services publish daily GEX estimates and gamma-flip levels for indexes and
+    single stocks (e.g. SqueezeMetrics’ GEX, SpotGamma, Menthor Q, and free community dashboards).
+    They all rest on the same naive dealer-positioning assumption from section 6 — useful as a map,
+    not as gospel.</p>
+  </div>
+</section>
+
+<hr>
+
+<!-- ================= GLOSSARY ================= -->
+<section id="glossary">
+  <h2>Glossary</h2>
+  <dl class="glossary">
+    <dt>Call / Put</dt><dd>The right to buy (call) or sell (put) 100 shares at the strike price, until expiry.</dd>
+    <dt>Strike</dt><dd>The fixed price the option lets you trade at.</dd>
+    <dt>Premium</dt><dd>What you pay for the option.</dd>
+    <dt>Expiry / DTE</dt><dd>When the contract ends; DTE = days to expiry. 0DTE = expires today.</dd>
+    <dt>ATM / ITM / OTM</dt><dd>At/in/out of the money — stock near / past / short of the strike.</dd>
+    <dt>Implied volatility (IV)</dt><dd>The amount of future movement the option’s price implies.</dd>
+    <dt>Delta</dt><dd>Option price change per $1 stock move; the option’s share-equivalent.</dd>
+    <dt>Gamma</dt><dd>Delta’s change per $1 stock move; how fast a hedge goes stale.</dd>
+    <dt>Theta</dt><dd>Daily decay of an option’s time value.</dd>
+    <dt>Market maker / dealer</dt><dd>The professional counterparty on most option trades; hedges rather than bets.</dd>
+    <dt>Delta hedging</dt><dd>Holding delta × 100 shares per contract to neutralize direction.</dd>
+    <dt>Open interest (OI)</dt><dd>Number of contracts outstanding at a strike.</dd>
+    <dt>GEX (gamma exposure)</dt><dd>Estimated dollars dealers must trade per 1% market move, summed across strikes.</dd>
+    <dt>Gamma flip</dt><dd>The price level where net GEX changes sign — the boundary between the calm and unstable regimes.</dd>
+    <dt>Gamma squeeze</dt><dd>A self-reinforcing rally driven by dealers hedging short calls.</dd>
+    <dt>OPEX</dt><dd>Monthly options expiration day, when large gamma positions expire at once.</dd>
+  </dl>
+</section>
+
+<section>
+  <div class="callout"><span class="kicker">Honest caveats</span>
+  <p>Everything here is a teaching model. Black–Scholes assumes constant volatility and no jumps;
+  naive GEX assumes it knows which side dealers are on (they publish no such thing); the regime
+  simulator compresses continuous intraday hedging into a one-day feedback term. Directionally
+  right, numerically simplified — and none of it is investment advice.</p></div>
+</section>
+
+</main>
+
+<footer class="site">
+  Built as a single HTML file with zero dependencies. Prices, open interest, and paths are synthetic,
+  computed in your browser with the Black–Scholes model.
+</footer>
+
+<script>
+"use strict";
+/* ================================================================
+   Options, Gamma & GEX — all logic inline, zero dependencies.
+   Math: Black–Scholes (r = 0 for simplicity throughout).
+   ================================================================ */
+
+/* ---------- math ---------- */
+const SQRT2PI = Math.sqrt(2 * Math.PI);
+function normPdf(x) { return Math.exp(-0.5 * x * x) / SQRT2PI; }
+function normCdf(x) { // Abramowitz & Stegun 26.2.17, |err| < 7.5e-8
+  const t = 1 / (1 + 0.2316419 * Math.abs(x));
+  const poly = t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 +
+               t * (-1.821255978 + t * 1.330274429))));
+  const p = normPdf(x) * poly;
+  return x >= 0 ? 1 - p : p;
+}
+/* Black–Scholes with r=0. T in years. Returns {call, put, deltaCall, deltaPut, gamma}. */
+function bs(S, K, T, sigma) {
+  if (T <= 0 || sigma <= 0) {
+    return {
+      call: Math.max(S - K, 0), put: Math.max(K - S, 0),
+      deltaCall: S > K ? 1 : 0, deltaPut: S > K ? 0 : -1, gamma: 0
+    };
+  }
+  const sq = sigma * Math.sqrt(T);
+  const d1 = (Math.log(S / K) + 0.5 * sigma * sigma * T) / sq;
+  const d2 = d1 - sq;
+  const call = S * normCdf(d1) - K * normCdf(d2);
+  return {
+    call,
+    put: call - S + K,               // put-call parity, r=0
+    deltaCall: normCdf(d1),
+    deltaPut: normCdf(d1) - 1,
+    gamma: normPdf(d1) / (S * sq)
+  };
+}
+
+/* ---------- formatting ---------- */
+const fmt$  = v => (v < 0 ? "−$" : "$") + Math.abs(v).toFixed(2).replace(/\.00$/, "");
+const fmt$2 = v => (v < 0 ? "−$" : "$") + Math.abs(v).toFixed(2);
+const fmtInt = v => Math.round(v).toLocaleString("en-US");
+function fmtCompact$(v) {
+  const a = Math.abs(v), sign = v < 0 ? "−$" : "$";
+  if (a >= 1e9) return sign + (a / 1e9).toFixed(2) + "B";
+  if (a >= 1e6) return sign + (a / 1e6).toFixed(1) + "M";
+  if (a >= 1e3) return sign + (a / 1e3).toFixed(0) + "K";
+  return sign + a.toFixed(0);
+}
+
+/* ---------- theme ---------- */
+const themeBtn = document.getElementById("themeToggle");
+function applyStoredTheme() {
+  const t = localStorage.getItem("ogx-theme");
+  if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+}
+applyStoredTheme();
+themeBtn.addEventListener("click", () => {
+  const cur = document.documentElement.dataset.theme ||
+    (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  const next = cur === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem("ogx-theme", next);
+  renderAll();
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
+
+function tokens() {
+  const cs = getComputedStyle(document.body);
+  const g = n => cs.getPropertyValue(n).trim();
+  return {
+    surface: g("--surface"), ink: g("--ink"), ink2: g("--ink-2"), muted: g("--muted"),
+    grid: g("--grid"), baseline: g("--baseline"),
+    s1: g("--series-1"), s2: g("--series-2"), s3: g("--series-3"),
+    pos: g("--div-pos"), neg: g("--div-neg")
+  };
+}
+
+/* ================================================================
+   Minimal SVG chart helpers (line chart with crosshair tooltip,
+   diverging bar chart with per-bar tooltip).
+   ================================================================ */
+const SVGNS = "http://www.w3.org/2000/svg";
+function el(name, attrs, parent) {
+  const n = document.createElementNS(SVGNS, name);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+function niceTicks(min, max, count) {
+  const span = max - min;
+  if (span <= 0) return [min];
+  const step0 = span / Math.max(1, count);
+  const mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  let step = mag;
+  for (const m of [1, 2, 2.5, 5, 10]) { if (mag * m >= step0) { step = mag * m; break; } }
+  const ticks = [];
+  for (let v = Math.ceil(min / step) * step; v <= max + 1e-9; v += step) {
+    ticks.push(Math.abs(v) < step * 1e-6 ? 0 : v);
+  }
+  return ticks;
+}
+
+/*
+ * renderLineChart(container, cfg)
+ * cfg: { height, xDomain:[a,b], yDomain:[a,b], xs:[...shared x samples],
+ *        series:[{name, color, values:[...], width?}],
+ *        fmtX, fmtY, ttFmtY, xLabel, yLabel, zeroLine?, annotations?:[
+ *          {type:'vline', x, label} | {type:'point', x, y, color, label} |
+ *          {type:'series-label', x, y, text, color} ] }
+ * Adds a legend (≥2 series), crosshair + tooltip listing every series,
+ * and keyboard navigation (arrow keys).
+ */
+function renderLineChart(container, cfg) {
+  const T = tokens();
+  container.textContent = "";
+  const W = Math.max(300, container.clientWidth || 600);
+  const H = cfg.height || 300;
+  const M = { t: 14, r: 18, b: 40, l: 52 };
+  const iw = W - M.l - M.r, ih = H - M.t - M.b;
+  const [x0, x1] = cfg.xDomain, [y0, y1] = cfg.yDomain;
+  const sx = v => M.l + (v - x0) / (x1 - x0) * iw;
+  const sy = v => M.t + (1 - (v - y0) / (y1 - y0)) * ih;
+
+  /* legend (only for ≥ 2 series) */
+  if (cfg.series.length >= 2) {
+    const lg = document.createElement("div");
+    lg.className = "legend";
+    for (const s of cfg.series) {
+      const k = document.createElement("span"); k.className = "key";
+      const sw = document.createElement("span"); sw.className = "swatch-line";
+      sw.style.borderTopColor = s.color;
+      const nm = document.createElement("span"); nm.textContent = s.name;
+      k.append(sw, nm); lg.appendChild(k);
+    }
+    container.appendChild(lg);
+  }
+
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H,
+    role: "img", tabindex: "0", "aria-label": cfg.ariaLabel || "chart" });
+  container.appendChild(svg);
+
+  /* gridlines + y ticks */
+  const yTicks = cfg.yTicks || niceTicks(y0, y1, 5);
+  for (const t of yTicks) {
+    if (t < y0 - 1e-9 || t > y1 + 1e-9) continue;
+    el("line", { x1: M.l, x2: M.l + iw, y1: sy(t), y2: sy(t),
+      stroke: T.grid, "stroke-width": 1 }, svg);
+    const lb = el("text", { x: M.l - 8, y: sy(t) + 4, "text-anchor": "end",
+      "font-size": 11, fill: T.muted, style: "font-variant-numeric:tabular-nums" }, svg);
+    lb.textContent = (cfg.fmtY || (v => v))(t);
+  }
+  /* x ticks */
+  const xTicks = cfg.xTicks || niceTicks(x0, x1, 7);
+  for (const t of xTicks) {
+    if (t < x0 - 1e-9 || t > x1 + 1e-9) continue;
+    const lb = el("text", { x: sx(t), y: M.t + ih + 18, "text-anchor": "middle",
+      "font-size": 11, fill: T.muted, style: "font-variant-numeric:tabular-nums" }, svg);
+    lb.textContent = (cfg.fmtX || (v => v))(t);
+  }
+  /* baseline (bottom axis) */
+  el("line", { x1: M.l, x2: M.l + iw, y1: M.t + ih, y2: M.t + ih,
+    stroke: T.baseline, "stroke-width": 1 }, svg);
+  /* zero line, if inside domain and not the bottom */
+  if (cfg.zeroLine && y0 < 0 && y1 > 0) {
+    el("line", { x1: M.l, x2: M.l + iw, y1: sy(0), y2: sy(0),
+      stroke: T.baseline, "stroke-width": 1 }, svg);
+  }
+  /* axis captions */
+  if (cfg.xLabel) {
+    const lb = el("text", { x: M.l + iw / 2, y: H - 4, "text-anchor": "middle",
+      "font-size": 11.5, fill: T.ink2 }, svg);
+    lb.textContent = cfg.xLabel;
+  }
+  if (cfg.yLabel) {
+    const lb = el("text", { x: 12, y: M.t + ih / 2, "text-anchor": "middle",
+      "font-size": 11.5, fill: T.ink2,
+      transform: `rotate(-90 12 ${M.t + ih / 2})` }, svg);
+    lb.textContent = cfg.yLabel;
+  }
+
+  /* series lines (2px, round joins) */
+  const clip = el("clipPath", { id: "clip-" + container.id }, svg);
+  el("rect", { x: M.l, y: M.t - 6, width: iw, height: ih + 6 }, clip);
+  for (const s of cfg.series) {
+    let d = "";
+    s.values.forEach((v, i) => {
+      d += (i === 0 ? "M" : "L") + sx(cfg.xs[i]).toFixed(1) + " " + sy(v).toFixed(1);
+    });
+    el("path", { d, fill: "none", stroke: s.color, "stroke-width": s.width || 2,
+      "stroke-linejoin": "round", "stroke-linecap": "round",
+      "clip-path": `url(#clip-${container.id})`,
+      "stroke-dasharray": s.dash || "none" }, svg);
+  }
+
+  /* annotations */
+  for (const a of (cfg.annotations || [])) {
+    if (a.type === "vline") {
+      el("line", { x1: sx(a.x), x2: sx(a.x), y1: M.t, y2: M.t + ih,
+        stroke: T.muted, "stroke-width": 1 }, svg);
+      if (a.label) {
+        const lb = el("text", { x: sx(a.x), y: M.t - 2, "text-anchor": "middle",
+          "font-size": 11, fill: T.ink2, "font-weight": 600 }, svg);
+        lb.textContent = a.label;
+      }
+    } else if (a.type === "point") {
+      el("circle", { cx: sx(a.x), cy: sy(a.y), r: 5.5, fill: a.color,
+        stroke: T.surface, "stroke-width": 2 }, svg);
+      if (a.label) {
+        const anchor = a.anchor || "start";
+        const dx = anchor === "start" ? 9 : anchor === "end" ? -9 : 0;
+        const lb = el("text", { x: sx(a.x) + dx, y: sy(a.y) + (a.dy != null ? a.dy : 4),
+          "text-anchor": anchor, "font-size": 11.5, fill: T.ink, "font-weight": 600 }, svg);
+        lb.textContent = a.label;
+      }
+    } else if (a.type === "series-label") {
+      /* direct label: colored tick + ink text (text never wears the data color) */
+      el("line", { x1: sx(a.x) - 14, x2: sx(a.x) - 4, y1: sy(a.y), y2: sy(a.y),
+        stroke: a.color, "stroke-width": 3, "stroke-linecap": "round" }, svg);
+      const lb = el("text", { x: sx(a.x), y: sy(a.y) + 4, "text-anchor": "start",
+        "font-size": 11.5, fill: T.ink, "font-weight": 600 }, svg);
+      lb.textContent = a.text;
+    }
+  }
+
+  /* crosshair + tooltip */
+  const cross = el("line", { x1: 0, x2: 0, y1: M.t, y2: M.t + ih,
+    stroke: T.muted, "stroke-width": 1, opacity: 0 }, svg);
+  const dots = cfg.series.map(s => el("circle", { r: 4.5, fill: s.color,
+    stroke: T.surface, "stroke-width": 2, opacity: 0 }, svg));
+  const tip = document.createElement("div"); tip.className = "tooltip";
+  container.appendChild(tip);
+
+  let curIdx = -1;
+  function showAt(idx, clientX) {
+    curIdx = idx;
+    const xv = cfg.xs[idx], px = sx(xv);
+    cross.setAttribute("x1", px); cross.setAttribute("x2", px);
+    cross.setAttribute("opacity", 1);
+    tip.textContent = "";
+    const xr = document.createElement("div"); xr.className = "tt-x";
+    xr.textContent = (cfg.ttFmtX || cfg.fmtX || (v => v))(xv);
+    tip.appendChild(xr);
+    cfg.series.forEach((s, si) => {
+      const v = s.values[idx];
+      dots[si].setAttribute("cx", px); dots[si].setAttribute("cy", sy(v));
+      dots[si].setAttribute("opacity", 1);
+      const row = document.createElement("div"); row.className = "tt-row";
+      const key = document.createElement("span"); key.className = "tt-key";
+      key.style.borderTopColor = s.color;
+      const val = document.createElement("span"); val.className = "tt-val";
+      val.textContent = (cfg.ttFmtY || cfg.fmtY || (v2 => v2))(v);
+      const nm = document.createElement("span"); nm.className = "tt-name";
+      nm.textContent = s.name;
+      row.append(key, val, nm); tip.appendChild(row);
+    });
+    tip.classList.add("show");
+    const rect = container.getBoundingClientRect();
+    const svgRect = svg.getBoundingClientRect();
+    const pxClient = svgRect.left + px / W * svgRect.width;
+    let left = pxClient - rect.left + 14;
+    if (left + tip.offsetWidth > rect.width - 6) left = pxClient - rect.left - tip.offsetWidth - 14;
+    tip.style.left = Math.max(0, left) + "px";
+    tip.style.top = (svgRect.top - rect.top + 10) + "px";
+  }
+  function hide() {
+    curIdx = -1;
+    cross.setAttribute("opacity", 0);
+    dots.forEach(d => d.setAttribute("opacity", 0));
+    tip.classList.remove("show");
+  }
+  function idxFromClientX(clientX) {
+    const svgRect = svg.getBoundingClientRect();
+    const px = (clientX - svgRect.left) / svgRect.width * W;
+    const xv = x0 + (px - M.l) / iw * (x1 - x0);
+    let best = 0, bd = Infinity;
+    cfg.xs.forEach((v, i) => { const d = Math.abs(v - xv); if (d < bd) { bd = d; best = i; } });
+    return best;
+  }
+  svg.addEventListener("pointermove", e => showAt(idxFromClientX(e.clientX), e.clientX));
+  svg.addEventListener("pointerleave", hide);
+  svg.addEventListener("keydown", e => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    const n = cfg.xs.length;
+    let i = curIdx < 0 ? Math.floor(n / 2) : curIdx + (e.key === "ArrowRight" ? 1 : -1);
+    i = Math.max(0, Math.min(n - 1, i));
+    showAt(i);
+  });
+  svg.addEventListener("blur", hide);
+}
+
+/* Diverging bar chart for GEX (rounded data-end, square baseline, 2px gaps,
+   per-bar hover tooltip, hit target = full band). */
+function renderGexBars(container, cfg) {
+  const T = tokens();
+  container.textContent = "";
+  const W = Math.max(300, container.clientWidth || 600);
+  const H = cfg.height || 320;
+  const M = { t: 14, r: 18, b: 40, l: 60 };
+  const iw = W - M.l - M.r, ih = H - M.t - M.b;
+  const strikes = cfg.strikes;
+  const band = iw / strikes.length;
+  const barW = Math.min(24, band - 2);       // ≤24px thick, ≥2px gap between bars
+  const maxAbs = cfg.maxAbs;
+  const sy = v => M.t + (1 - (v + maxAbs) / (2 * maxAbs)) * ih;
+  const xC = i => M.l + band * (i + 0.5);
+
+  /* legend */
+  const lg = document.createElement("div");
+  lg.className = "legend";
+  for (const s of cfg.legend) {
+    const k = document.createElement("span"); k.className = "key";
+    const sw = document.createElement("span"); sw.className = "swatch-rect";
+    sw.style.background = s.color;
+    const nm = document.createElement("span"); nm.textContent = s.name;
+    k.append(sw, nm); lg.appendChild(k);
+  }
+  container.appendChild(lg);
+
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H,
+    role: "img", tabindex: "0", "aria-label": "Gamma exposure by strike" });
+  container.appendChild(svg);
+
+  /* grid + y ticks */
+  for (const t of niceTicks(-maxAbs, maxAbs, 6)) {
+    el("line", { x1: M.l, x2: M.l + iw, y1: sy(t), y2: sy(t),
+      stroke: t === 0 ? T.baseline : T.grid, "stroke-width": 1 }, svg);
+    const lb = el("text", { x: M.l - 8, y: sy(t) + 4, "text-anchor": "end",
+      "font-size": 11, fill: T.muted, style: "font-variant-numeric:tabular-nums" }, svg);
+    lb.textContent = fmtCompact$(t);
+  }
+  /* x labels (strikes) — thin out on narrow screens */
+  const every = band < 34 ? 2 : 1;
+  strikes.forEach((k, i) => {
+    if (i % every) return;
+    const lb = el("text", { x: xC(i), y: M.t + ih + 18, "text-anchor": "middle",
+      "font-size": 11, fill: T.muted, style: "font-variant-numeric:tabular-nums" }, svg);
+    lb.textContent = "$" + k;
+  });
+  const xlb = el("text", { x: M.l + iw / 2, y: H - 4, "text-anchor": "middle",
+    "font-size": 11.5, fill: T.ink2 }, svg);
+  xlb.textContent = "Strike price";
+
+  /* rounded-end bar path: square at baseline, 4px radius at the data end */
+  function barPath(cx, v) {
+    const x = cx - barW / 2, r = Math.min(4, barW / 2);
+    const yBase = sy(0), yEnd = sy(v);
+    const h = Math.abs(yBase - yEnd);
+    if (h < 0.5) return null;
+    const rr = Math.min(r, h);
+    if (v >= 0) {
+      return `M${x} ${yBase} L${x} ${yEnd + rr} Q${x} ${yEnd} ${x + rr} ${yEnd} ` +
+             `L${x + barW - rr} ${yEnd} Q${x + barW} ${yEnd} ${x + barW} ${yEnd + rr} ` +
+             `L${x + barW} ${yBase} Z`;
+    }
+    return `M${x} ${yBase} L${x} ${yEnd - rr} Q${x} ${yEnd} ${x + rr} ${yEnd} ` +
+           `L${x + barW - rr} ${yEnd} Q${x + barW} ${yEnd} ${x + barW} ${yEnd - rr} ` +
+           `L${x + barW} ${yBase} Z`;
+  }
+
+  const tip = document.createElement("div"); tip.className = "tooltip";
+  container.appendChild(tip);
+  const bars = [];
+
+  strikes.forEach((k, i) => {
+    const vals = cfg.values[i]; // array of {v, color, name} stacked from zero (split: call up, put down; net: one)
+    const shapes = [];
+    for (const seg of vals) {
+      const d = barPath(xC(i), seg.v);
+      if (d) shapes.push(el("path", { d, fill: seg.color }, svg));
+    }
+    /* invisible full-band hit target */
+    const hit = el("rect", { x: M.l + band * i, y: M.t, width: band, height: ih,
+      fill: "transparent" }, svg);
+    bars.push({ hit, shapes, i });
+    function show(e) {
+      shapes.forEach(s => s.setAttribute("opacity", 0.75));
+      tip.textContent = "";
+      const xr = document.createElement("div"); xr.className = "tt-x";
+      xr.textContent = "Strike $" + k;
+      tip.appendChild(xr);
+      for (const row of cfg.tooltipRows(i)) {
+        const r = document.createElement("div"); r.className = "tt-row";
+        const key = document.createElement("span"); key.className = "tt-key";
+        key.style.borderTopColor = row.color;
+        const val = document.createElement("span"); val.className = "tt-val";
+        val.textContent = row.value;
+        const nm = document.createElement("span"); nm.className = "tt-name";
+        nm.textContent = row.name;
+        r.append(key, val, nm); tip.appendChild(r);
+      }
+      tip.classList.add("show");
+      const rect = container.getBoundingClientRect();
+      const svgRect = svg.getBoundingClientRect();
+      const pxClient = svgRect.left + xC(i) / W * svgRect.width;
+      let left = pxClient - rect.left + 12;
+      if (left + tip.offsetWidth > rect.width - 6) left = pxClient - rect.left - tip.offsetWidth - 12;
+      tip.style.left = Math.max(0, left) + "px";
+      tip.style.top = (svgRect.top - rect.top + 8) + "px";
+    }
+    function unshow() {
+      shapes.forEach(s => s.setAttribute("opacity", 1));
+      tip.classList.remove("show");
+    }
+    hit.addEventListener("pointerenter", show);
+    hit.addEventListener("pointerleave", unshow);
+  });
+
+  /* spot + flip annotations — each on its own label row so they never collide */
+  (cfg.annotations || []).forEach((a, ai) => {
+    const px = M.l + (a.x - cfg.xMin) / (cfg.xMax - cfg.xMin) * iw;
+    el("line", { x1: px, x2: px, y1: M.t, y2: M.t + ih, stroke: a.color || T.muted,
+      "stroke-width": a.w || 1 }, svg);
+    if (a.label) {
+      let anchor = a.anchor || "start";
+      if (anchor === "start" && px > M.l + iw - 90) anchor = "end";
+      if (anchor === "end" && px < M.l + 90) anchor = "start";
+      const lb = el("text", { x: px + (anchor === "start" ? 5 : -5), y: M.t + 12 + ai * 14,
+        "text-anchor": anchor, "font-size": 11, fill: T.ink2, "font-weight": 600 }, svg);
+      lb.textContent = a.label;
+    }
+  });
+}
+
+/* ================================================================
+   Section 1 — payoff at expiry
+   ================================================================ */
+const payoffState = { type: "call", side: "buy", K: 100, prem: 5 };
+function segWire(id, key, state, cb) {
+  const seg = document.getElementById(id);
+  seg.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+    state[key] = b.dataset.v; cb();
+  }));
+}
+function payoffAt(S) {
+  const { type, side, K, prem } = payoffState;
+  const intrinsic = type === "call" ? Math.max(S - K, 0) : Math.max(K - S, 0);
+  return side === "buy" ? intrinsic - prem : prem - intrinsic;
+}
+function renderPayoff() {
+  const T = tokens();
+  const { type, side, K, prem } = payoffState;
+  document.getElementById("payoffKOut").textContent = "$" + K;
+  document.getElementById("payoffPremOut").textContent = fmt$2(prem);
+  document.getElementById("payoffSub").textContent =
+    (side === "buy" ? "You buy" : "You sell") + " one " + type +
+    ", strike $" + K + ", premium " + fmt$2(prem) + " per share";
+  const xs = []; for (let s = 70; s <= 130; s += 0.5) xs.push(s);
+  const vals = xs.map(payoffAt);
+  const be = type === "call" ? K + prem : K - prem;
+  const span = Math.max(15, prem + 5, ...vals.map(Math.abs));
+  renderLineChart(document.getElementById("payoffChart"), {
+    height: 300, xDomain: [70, 130], yDomain: [-span, span], xs,
+    series: [{ name: "P/L at expiry", color: T.s1, values: vals }],
+    fmtX: v => "$" + v, fmtY: fmt$, ttFmtY: fmt$2, zeroLine: true,
+    xLabel: "Stock price at expiry", yLabel: "Profit / loss per share",
+    ariaLabel: "Option profit and loss at expiry",
+    annotations: [
+      { type: "vline", x: K, label: "strike $" + K },
+      { type: "point", x: be, y: 0, color: T.s1, label: "breakeven $" + be.toFixed(2).replace(/\.00$/, ""),
+        anchor: be > 108 ? "end" : "start", dy: -10 }
+    ]
+  });
+}
+segWire("payoffType", "type", payoffState, renderPayoff);
+segWire("payoffSide", "side", payoffState, renderPayoff);
+document.getElementById("payoffK").addEventListener("input", e => { payoffState.K = +e.target.value; renderPayoff(); });
+document.getElementById("payoffPrem").addEventListener("input", e => { payoffState.prem = +e.target.value; renderPayoff(); });
+
+/* ================================================================
+   Section 2 — value before expiry
+   ================================================================ */
+const valueState = { iv: 0.25, dte: 60 };
+function renderValue() {
+  const T = tokens();
+  const { iv, dte } = valueState;
+  document.getElementById("valueIVOut").textContent = Math.round(iv * 100) + "%";
+  document.getElementById("valueDTEOut").textContent = dte + (dte === 1 ? " day" : " days");
+  document.getElementById("valueSub").textContent =
+    "Smooth curve: model value today · kinked line: what it pays at expiry";
+  const xs = []; for (let s = 70; s <= 130; s += 0.5) xs.push(s);
+  const today = xs.map(S => bs(S, 100, dte / 365, iv).call);
+  const expiry = xs.map(S => Math.max(S - 100, 0));
+  const yMax = Math.max(32, today[today.length - 1] * 1.05);
+  renderLineChart(document.getElementById("valueChart"), {
+    height: 300, xDomain: [70, 130], yDomain: [0, yMax], xs,
+    series: [
+      { name: "Value today (Black–Scholes)", color: T.s1, values: today },
+      { name: "Payoff at expiry (intrinsic)", color: T.s2, values: expiry }
+    ],
+    fmtX: v => "$" + v, fmtY: fmt$, ttFmtY: fmt$2,
+    xLabel: "Stock price today", yLabel: "Call value per share",
+    ariaLabel: "Call value versus stock price",
+    annotations: [{ type: "vline", x: 100, label: "strike $100" }]
+  });
+}
+document.getElementById("valueIV").addEventListener("input", e => { valueState.iv = +e.target.value / 100; renderValue(); });
+document.getElementById("valueDTE").addEventListener("input", e => { valueState.dte = +e.target.value; renderValue(); });
+
+/* ================================================================
+   Section 3 — delta
+   ================================================================ */
+const deltaState = { dte: 30 };
+function renderDelta() {
+  const T = tokens();
+  const { dte } = deltaState;
+  document.getElementById("deltaDTEOut").textContent = dte + (dte === 1 ? " day" : " days");
+  document.getElementById("deltaSub").textContent =
+    "IV 25% · call delta runs 0→1, put delta 0→−1 · the two always differ by exactly 1";
+  const xs = []; for (let s = 70; s <= 130; s += 0.5) xs.push(s);
+  const dc = xs.map(S => bs(S, 100, dte / 365, 0.25).deltaCall);
+  const dp = xs.map(S => bs(S, 100, dte / 365, 0.25).deltaPut);
+  renderLineChart(document.getElementById("deltaChart"), {
+    height: 300, xDomain: [70, 130], yDomain: [-1.05, 1.05], xs,
+    yTicks: [-1, -0.5, 0, 0.5, 1],
+    series: [
+      { name: "Call delta", color: T.s1, values: dc },
+      { name: "Put delta", color: T.s2, values: dp }
+    ],
+    fmtX: v => "$" + v, fmtY: v => v.toFixed(1), ttFmtY: v => v.toFixed(2),
+    zeroLine: true,
+    xLabel: "Stock price", yLabel: "Delta",
+    ariaLabel: "Call and put delta versus stock price",
+    annotations: [
+      { type: "vline", x: 100, label: "strike $100" },
+      { type: "point", x: 100, y: bs(100, 100, dte / 365, 0.25).deltaCall,
+        color: T.s1, label: "≈ 0.5 at the money", anchor: "start", dy: -8 }
+    ]
+  });
+}
+document.getElementById("deltaDTE").addEventListener("input", e => { deltaState.dte = +e.target.value; renderDelta(); });
+
+/* ================================================================
+   Section 4 — gamma at three expiries
+   ================================================================ */
+function renderGamma() {
+  const T = tokens();
+  const xs = []; for (let s = 80; s <= 120; s += 0.25) xs.push(s);
+  const dtes = [
+    { d: 30, name: "30 days", color: T.s1 },
+    { d: 7,  name: "7 days",  color: T.s2 },
+    { d: 1,  name: "1 day",   color: T.s3 }
+  ];
+  const series = dtes.map(o => ({
+    name: o.name, color: o.color,
+    values: xs.map(S => bs(S, 100, o.d / 365, 0.25).gamma)
+  }));
+  const yMax = Math.max(...series[2].values) * 1.15;
+  /* direct label each curve to the right of its peak, where the three separate
+     (doubles as relief for the low-contrast magenta slot in light mode) */
+  const ann = [{ type: "vline", x: 100, label: "strike $100" }];
+  const labelX = [110, 106.5, 102.75];
+  dtes.forEach((o, i) => {
+    const xi = Math.round((labelX[i] - 80) / 0.25);
+    ann.push({ type: "series-label", x: labelX[i] + 1.2, y: series[i].values[xi], text: o.name, color: o.color });
+  });
+  renderLineChart(document.getElementById("gammaChart"), {
+    height: 320, xDomain: [80, 120], yDomain: [0, yMax], xs, series,
+    fmtX: v => "$" + v, fmtY: v => v.toFixed(2), ttFmtY: v => v.toFixed(3),
+    xLabel: "Stock price", yLabel: "Gamma (Δdelta per $1)",
+    ariaLabel: "Gamma versus stock price for three expiries",
+    annotations: ann
+  });
+}
+
+/* ================================================================
+   Section 5 — dealer hedge ladder
+   ================================================================ */
+const hedgeState = { spot: 100 };
+const HEDGE = { K: 100, T: 30 / 365, iv: 0.25, contracts: 10 }; // dealer short 10 calls
+function hedgeShares(S) { return bs(S, HEDGE.K, HEDGE.T, HEDGE.iv).deltaCall * HEDGE.contracts * 100; }
+function renderHedge() {
+  const T = tokens();
+  const S = hedgeState.spot;
+  document.getElementById("hedgeSpotOut").textContent = fmt$2(S);
+  const xs = []; for (let s = 85; s <= 115; s += 0.25) xs.push(s);
+  const vals = xs.map(hedgeShares);
+  const now = hedgeShares(S), up = hedgeShares(S + 2), down = hedgeShares(S - 2);
+  document.getElementById("hedgeNow").textContent = fmtInt(now);
+  document.getElementById("hedgeUp").textContent = "+" + fmtInt(up - now);
+  document.getElementById("hedgeDown").textContent = "−" + fmtInt(now - down);
+  renderLineChart(document.getElementById("hedgeChart"), {
+    height: 300, xDomain: [85, 115], yDomain: [0, 1050], xs,
+    yTicks: [0, 250, 500, 750, 1000],
+    series: [{ name: "Shares held to stay hedged", color: T.s1, values: vals }],
+    fmtX: v => "$" + v, fmtY: fmtInt, ttFmtY: v => fmtInt(v) + " sh",
+    xLabel: "Stock price", yLabel: "Dealer hedge (shares)",
+    ariaLabel: "Dealer hedge shares versus stock price",
+    annotations: [
+      { type: "vline", x: HEDGE.K, label: "strike $100" },
+      { type: "point", x: S, y: now, color: T.s1,
+        label: "now: " + fmtInt(now) + " sh", anchor: S > 106 ? "end" : "start", dy: -9 }
+    ]
+  });
+}
+document.getElementById("hedgeSpot").addEventListener("input", e => { hedgeState.spot = +e.target.value; renderHedge(); });
+
+/* ================================================================
+   Section 6 — GEX by strike
+   ================================================================ */
+/* Fixed synthetic open interest (contracts) — calls cluster above spot,
+   puts below, round-number strikes get extra weight. */
+const GEX_STRIKES = [70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130];
+const GEX_CALL_OI = [200, 300, 900, 1400, 2600, 5200, 9800, 8600, 7400, 4200, 4800, 1900, 2400];
+const GEX_PUT_OI  = [2600, 2200, 5400, 4400, 7800, 8600, 7000, 3600, 1800, 900, 700, 300, 200];
+const GEX_T = 21 / 365, GEX_IV = 0.25;
+const gexState = { spot: 100, mode: "split" };
+/* Naive convention: dealers long calls (+ gamma), short puts (− gamma).
+   Dollar GEX per strike per 1% move = gamma × OI × 100 sh × S × (S × 1%). */
+function gexRows(spot) {
+  return GEX_STRIKES.map((K, i) => {
+    const g = bs(spot, K, GEX_T, GEX_IV).gamma;
+    const scale = 100 * spot * spot * 0.01;
+    const call = g * GEX_CALL_OI[i] * scale;
+    const put = -g * GEX_PUT_OI[i] * scale;
+    return { K, call, put, net: call + put };
+  });
+}
+/* Flip estimate: scan spot prices, find where TOTAL net GEX crosses zero. */
+function gexFlip() {
+  let prevS = null, prevV = null;
+  for (let s = 82; s <= 118; s += 0.25) {
+    const tot = gexRows(s).reduce((a, r) => a + r.net, 0);
+    if (prevV !== null && prevV <= 0 && tot > 0) {
+      return prevS + (0 - prevV) / (tot - prevV) * (s - prevS);
+    }
+    prevS = s; prevV = tot;
+  }
+  return null;
+}
+let gexFlipCache = null;
+function renderGex() {
+  const T = tokens();
+  const { spot, mode } = gexState;
+  document.getElementById("gexSpotOut").textContent = fmt$2(spot);
+  document.getElementById("gexSub").textContent =
+    "Synthetic open interest · 21 days to expiry · IV 25% · naive dealer positioning (long calls, short puts)";
+  const rows = gexRows(spot);
+  const total = rows.reduce((a, r) => a + r.net, 0);
+  if (gexFlipCache === null) gexFlipCache = gexFlip();
+  document.getElementById("gexTotal").textContent = fmtCompact$(total);
+  document.getElementById("gexFlip").textContent =
+    gexFlipCache ? "≈ $" + gexFlipCache.toFixed(0) : "—";
+
+  const maxAbs = Math.max(...rows.map(r => Math.max(Math.abs(r.call), Math.abs(r.put), Math.abs(r.net)))) * 1.1;
+  const values = rows.map(r => mode === "split"
+    ? [{ v: r.call, color: T.pos }, { v: r.put, color: T.neg }]
+    : [{ v: r.net, color: r.net >= 0 ? T.pos : T.neg }]);
+  const ann = [{ x: spot, label: "price now", color: T.muted, w: 1.5, anchor: "start" }];
+  if (gexFlipCache) ann.push({ x: gexFlipCache, label: "gamma flip", color: T.muted, anchor: "end" });
+  renderGexBars(document.getElementById("gexChart"), {
+    height: 330, strikes: GEX_STRIKES, values, maxAbs,
+    xMin: 67.5, xMax: 132.5,
+    legend: mode === "split"
+      ? [{ name: "Call gamma (dealers long → stabilizing)", color: T.pos },
+         { name: "Put gamma (dealers short → destabilizing)", color: T.neg }]
+      : [{ name: "Net GEX positive", color: T.pos }, { name: "Net GEX negative", color: T.neg }],
+    tooltipRows: i => mode === "split"
+      ? [{ name: "call GEX", value: fmtCompact$(rows[i].call), color: T.pos },
+         { name: "put GEX", value: fmtCompact$(rows[i].put), color: T.neg },
+         { name: "net", value: fmtCompact$(rows[i].net), color: T.muted }]
+      : [{ name: "net GEX", value: fmtCompact$(rows[i].net), color: rows[i].net >= 0 ? T.pos : T.neg }],
+    annotations: ann
+  });
+  /* table view */
+  const tb = document.querySelector("#gexTable tbody");
+  tb.textContent = "";
+  for (const r of rows) {
+    const tr = document.createElement("tr");
+    for (const v of ["$" + r.K, (r.call / 1e6).toFixed(2), (r.put / 1e6).toFixed(2), (r.net / 1e6).toFixed(2)]) {
+      const td = document.createElement("td"); td.textContent = v; tr.appendChild(td);
+    }
+    tb.appendChild(tr);
+  }
+}
+segWire("gexMode", "mode", gexState, renderGex);
+document.getElementById("gexSpot").addEventListener("input", e => { gexState.spot = +e.target.value; renderGex(); });
+
+/* ================================================================
+   Section 7 — regime simulation
+   ================================================================ */
+const simState = { k: 0.45, seed: 7 };
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function gauss(rng) { // Box–Muller
+  const u = Math.max(rng(), 1e-12), v = rng();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+function simulate() {
+  const { k, seed } = simState;
+  const N = 130, sigma = 0.012;
+  const rng = mulberry32(seed);
+  const z = Array.from({ length: N }, () => gauss(rng));
+  const paths = { base: [100], pos: [100], neg: [100] };
+  const rets = { base: [], pos: [], neg: [] };
+  let rBase = 0, rPos = 0, rNeg = 0;
+  for (let t = 0; t < N; t++) {
+    const shock = sigma * z[t];
+    rBase = shock;
+    /* long-gamma dealers trade against each move, absorbing part of it;
+       short-gamma dealers chase the move AND yesterday's (momentum) */
+    rPos = shock / (1 + k);
+    rNeg = shock * (1 + k) + k * rNeg;
+    rNeg = Math.max(-0.12, Math.min(0.12, rNeg)); // sanity clamp for extreme feedback
+    rets.base.push(rBase); rets.pos.push(rPos); rets.neg.push(rNeg);
+    paths.base.push(paths.base[t] * (1 + rBase));
+    paths.pos.push(paths.pos[t] * (1 + rPos));
+    paths.neg.push(paths.neg[t] * (1 + rNeg));
+  }
+  return { paths, rets };
+}
+function annVol(rets) {
+  const m = rets.reduce((a, b) => a + b, 0) / rets.length;
+  const va = rets.reduce((a, b) => a + (b - m) * (b - m), 0) / (rets.length - 1);
+  return Math.sqrt(va * 252);
+}
+function renderSim() {
+  const T = tokens();
+  document.getElementById("simKOut").textContent = simState.k.toFixed(2);
+  const { paths, rets } = simulate();
+  document.getElementById("simVol0").textContent = (annVol(rets.base) * 100).toFixed(1) + "%";
+  document.getElementById("simVolPos").textContent = (annVol(rets.pos) * 100).toFixed(1) + "%";
+  document.getElementById("simVolNeg").textContent = (annVol(rets.neg) * 100).toFixed(1) + "%";
+  const xs = Array.from({ length: paths.base.length }, (_, i) => i);
+  const all = [...paths.base, ...paths.pos, ...paths.neg];
+  const lo = Math.min(...all) * 0.99, hi = Math.max(...all) * 1.01;
+  renderLineChart(document.getElementById("simChart"), {
+    height: 330, xDomain: [0, xs.length - 1], yDomain: [lo, hi], xs,
+    series: [
+      { name: "No hedging feedback", color: T.muted, values: paths.base, dash: "4 4" },
+      { name: "Positive GEX (dampened)", color: T.pos, values: paths.pos },
+      { name: "Negative GEX (amplified)", color: T.neg, values: paths.neg }
+    ],
+    fmtX: v => "day " + v, fmtY: v => "$" + Math.round(v), ttFmtY: v => "$" + v.toFixed(2),
+    xLabel: "Trading day", yLabel: "Price",
+    ariaLabel: "Simulated price paths under positive and negative gamma"
+  });
+}
+document.getElementById("simK").addEventListener("input", e => { simState.k = +e.target.value; renderSim(); });
+document.getElementById("simReplay").addEventListener("click", () => { simState.seed = (simState.seed * 1664525 + 1013904223) >>> 0; renderSim(); });
+
+/* ================================================================
+   render everything, and re-render on resize / theme change
+   ================================================================ */
+function renderAll() {
+  renderPayoff(); renderValue(); renderDelta(); renderGamma();
+  renderHedge(); renderGex(); renderSim();
+}
+let resizeTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(renderAll, 150);
+});
+renderAll();
+</script>
+</body>
+</html>
