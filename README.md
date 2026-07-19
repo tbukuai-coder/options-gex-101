@@ -3,7 +3,7 @@
 A zero-dependency HTML explainer that builds up — from nothing — how stock
 options work and how option **dealer hedging** feeds back into the stock market itself:
 delta, gamma, **GEX (gamma exposure)**, the gamma flip, gamma squeezes, OPEX pinning,
-and the 0DTE era. Two tabs:
+and the 0DTE era. Four tabs:
 
 - **📖 Guide** — the eight-section interactive course (all data synthetic).
 - **🧪 Playground** — build a real position from real (delayed) option chains: pick
@@ -11,6 +11,15 @@ and the 0DTE era. Two tabs:
   call or put, and see total P/L vs. stock price — both "if it jumps there today"
   (Black–Scholes re-pricing at the option's listed IV) and at expiry — plus breakeven,
   max profit/loss, share-equivalent delta, and a what-if price slider.
+- **🦋 Strategies** — multi-leg strategy lab on the same real chains: nine recipes
+  (call butterfly, iron butterfly, iron condor, bull call / bear put spread, straddle,
+  strangle, covered call, protective put) built from listed strikes with a centre-strike
+  and wing-width picker. Shows the legs, net debit/credit, breakevens, max profit/loss
+  with where-it-happens notes, net delta ("acts like N shares"), net gamma with a
+  long/short-gamma reading, and the P/L-today vs. at-expiry chart. Each strategy carries
+  a "why & when" explainer plus a gamma-lens note tying it back to the Guide (butterflies
+  as OPEX-pin bets, condor sellers as squeeze casualties, covered-call/protective-put
+  customers as the naive GEX model's assumed flow).
 - **⏳ Time machine** — a game on real history: jump to a random past trading day or a
   real past **earnings report date** (e.g. one of NVDA's actual reports), see only the
   price chart up to that day, pick call/put × buy/sell × strike (±10%) × expiry
@@ -67,6 +76,7 @@ estimates premiums with Black–Scholes from trailing 3-month realized volatilit
 | 8 | In the wild | GameStop gamma squeeze, OPEX pinning, 0DTE, where GEX dashboards live |
 | — | Glossary + caveats | Every term used, plus an honest list of the model's simplifications |
 | 🧪 | Playground tab | Real-chain position builder: ticker/expiry/strike selectors, buy/sell × call/put, contracts, P/L-today + P/L-at-expiry chart, what-if slider |
+| 🦋 | Strategies tab | Multi-leg strategy lab: 9 recipes on real chains, leg chips, debit/credit, breakevens, max P/L, net delta/gamma tiles, per-strategy explainers |
 
 ## Implementation notes
 

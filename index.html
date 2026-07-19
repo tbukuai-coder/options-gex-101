@@ -219,6 +219,18 @@ button.plain:hover { border-color: var(--baseline); }
   .flow .arrow .glyph { transform: rotate(90deg); }
 }
 
+/* ---------- strategy leg chips ---------- */
+.legchips { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 12px; }
+.legchip {
+  font-size: 12.5px; color: var(--ink-2);
+  border: 1px solid var(--border); border-radius: 999px;
+  padding: 4px 12px; background: var(--surface);
+  font-variant-numeric: tabular-nums;
+}
+.legchip b { font-weight: 700; }
+.legchip.buy b { color: var(--pl-up); }
+.legchip.sell b { color: var(--pl-down); }
+
 /* ---------- table view ---------- */
 details.tableview { margin-top: 10px; }
 details.tableview summary { cursor: pointer; font-size: 13px; color: var(--ink-2); }
@@ -246,6 +258,7 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 40px 0; }
   <div class="tabs" id="tabBar" role="tablist" aria-label="Site sections">
     <button aria-pressed="true" data-tab="guide">📖 Guide</button>
     <button aria-pressed="false" data-tab="playground">🧪 Playground</button>
+    <button aria-pressed="false" data-tab="strategies">🦋 Strategies</button>
     <button aria-pressed="false" data-tab="history">⏳ Time machine</button>
   </div>
   <button class="plain" id="themeToggle" aria-label="Toggle color theme">◐ Theme</button>
@@ -583,6 +596,11 @@ sliders and watch the curves respond.</p>
     <dt>Gamma flip</dt><dd>The price level where net GEX changes sign — the boundary between the calm and unstable regimes.</dd>
     <dt>Gamma squeeze</dt><dd>A self-reinforcing rally driven by dealers hedging short calls.</dd>
     <dt>OPEX</dt><dd>Monthly options expiration day, when large gamma positions expire at once.</dd>
+    <dt>Leg</dt><dd>One option (or share position) inside a multi-part strategy.</dd>
+    <dt>Spread</dt><dd>Buying one option and selling another against it. Debit spreads cost money up front; credit spreads collect it.</dd>
+    <dt>Straddle / strangle</dt><dd>A call and a put bought together — same strike (straddle) or different strikes (strangle) — a bet on movement, not direction.</dd>
+    <dt>Butterfly</dt><dd>A three-strike combo (buy–sell 2×–buy) that pays most if the stock closes at the middle strike; the capped bet on a pin.</dd>
+    <dt>Iron condor</dt><dd>A short put spread plus a short call spread; keeps its credit while the stock stays inside the band.</dd>
   </dl>
 </section>
 
@@ -673,6 +691,104 @@ sliders and watch the curves respond.</p>
   live, and you’d actually trade at bid or ask, not mid. The “today” curve re-prices the option
   with Black–Scholes (r&nbsp;=&nbsp;0) holding the option’s listed IV constant; in reality IV moves
   too (that’s vega), especially in a squeeze. Educational only, not investment advice.</p></div>
+</main>
+
+<main id="tab-strategies" hidden>
+  <h1>Strategy lab — sculpt the payoff</h1>
+  <p class="lead">A single option is a blunt bet on direction. Combining two, three or four
+  <b>legs</b> reshapes the payoff: cap what you can lose, get paid for time passing, or bet on
+  <i>how much</i> the stock moves instead of <i>which way</i>. Built on the same real (delayed)
+  option chains as the Playground — pick a recipe and drag the what-if slider.</p>
+
+  <div class="card chart-card">
+    <p class="chart-title">Build a strategy</p>
+    <p class="chart-sub" id="stStatus">Loading data…</p>
+    <div class="controls">
+      <div class="ctl"><label>Stock</label>
+        <div class="seg" id="stTicker" role="group" aria-label="Ticker">
+          <button aria-pressed="true" data-v="NVDA">NVDA</button>
+          <button aria-pressed="false" data-v="TSLA">TSLA</button>
+          <button aria-pressed="false" data-v="AAPL">AAPL</button>
+          <button aria-pressed="false" data-v="MSFT">MSFT</button>
+          <button aria-pressed="false" data-v="AMD">AMD</button>
+          <button aria-pressed="false" data-v="SPY">SPY</button>
+        </div>
+      </div>
+      <div class="ctl"><label for="stExp">Expiry</label>
+        <select id="stExp"></select>
+      </div>
+      <div class="ctl"><label for="stStrat">Strategy</label>
+        <select id="stStrat" style="max-width:260px">
+          <optgroup label="Bet on a range (pin / stay put)">
+            <option value="butterfly" selected>Butterfly — pin near a strike</option>
+            <option value="iron-butterfly">Iron butterfly — get paid to pin</option>
+            <option value="iron-condor">Iron condor — stay inside a band</option>
+          </optgroup>
+          <optgroup label="Bet on direction, capped">
+            <option value="bull-call">Bull call spread — up, cheaply</option>
+            <option value="bear-put">Bear put spread — down, cheaply</option>
+          </optgroup>
+          <optgroup label="Bet on a big move (either way)">
+            <option value="straddle">Long straddle — big move coming</option>
+            <option value="strangle">Long strangle — bigger move, cheaper</option>
+          </optgroup>
+          <optgroup label="Own the stock, add an option">
+            <option value="covered-call">Covered call — income on shares</option>
+            <option value="protective-put">Protective put — insurance on shares</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="ctl"><label for="stCenter">Center strike</label>
+        <select id="stCenter"></select>
+      </div>
+      <div class="ctl"><label for="stWidth">Wing width</label>
+        <select id="stWidth"></select>
+      </div>
+      <div class="ctl"><label for="stN">Contracts</label>
+        <input type="number" id="stN" min="1" max="1000" step="1" value="1">
+      </div>
+    </div>
+
+    <div class="legchips" id="stLegs"></div>
+
+    <div class="tiles">
+      <div class="tile"><div class="t-label">Net cost</div><div class="t-value" id="stCost">—</div><div class="t-note" id="stCostNote"></div></div>
+      <div class="tile"><div class="t-label">Breakeven at expiry</div><div class="t-value" id="stBE">—</div><div class="t-note" id="stBENote"></div></div>
+      <div class="tile"><div class="t-label">Max profit</div><div class="t-value" id="stMaxWin">—</div><div class="t-note" id="stMaxWinNote"></div></div>
+      <div class="tile"><div class="t-label">Max loss</div><div class="t-value" id="stMaxLoss">—</div><div class="t-note" id="stMaxLossNote"></div></div>
+      <div class="tile"><div class="t-label">Acts like</div><div class="t-value" id="stShares">—</div><div class="t-note">shares right now (net delta)</div></div>
+      <div class="tile"><div class="t-label">Net gamma</div><div class="t-value" id="stGamma">—</div><div class="t-note" id="stGammaNote"></div></div>
+    </div>
+
+    <div class="chart" id="stChart"></div>
+
+    <h3>What if the price moves?</h3>
+    <div class="controls">
+      <div class="ctl"><label for="stWhatIf">Stock price moves to</label>
+        <input type="range" id="stWhatIf" min="0" max="1" step="1">
+        <output id="stWhatIfOut"></output>
+      </div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><div class="t-label">P/L if it jumps there today</div><div class="t-value" id="stPLNow">—</div><div class="t-note">every leg re-priced with Black–Scholes at its listed IV</div></div>
+      <div class="tile"><div class="t-label">P/L if it's there at expiry</div><div class="t-value" id="stPLExp">—</div><div class="t-note" id="stPLExpNote"></div></div>
+      <div class="tile"><div class="t-label">Return on risk</div><div class="t-value" id="stRet">—</div><div class="t-note" id="stRetNote"></div></div>
+    </div>
+    <p class="tryit"><b>Try it:</b> keep the default <b>butterfly</b> and drag the what-if slider to
+    the middle strike. At expiry the payoff peaks there — a small-debit, capped bet that the stock
+    <i>pins</i>. But notice the blue "today" line barely lifts: the tent only grows tall as expiry
+    approaches and time value drains out of the two short calls. Then switch to the
+    <b>iron condor</b> and watch the Net cost tile flip from a debit you pay to a credit you
+    collect.</p>
+  </div>
+
+  <div class="callout"><span class="kicker" id="stWhyKicker">This strategy</span><div id="stWhy"></div></div>
+
+  <div class="callout"><span class="kicker">Honest caveats</span>
+  <p>Every leg is filled at the <b>mid</b> of delayed quotes — real multi-leg orders cross several
+  bid–ask spreads, so actual fills are worse, especially on four-leg trades. The "today" curve holds
+  each leg's listed IV constant (no vega, no skew shift); early assignment on short American-style
+  legs and margin requirements are ignored. Educational only, not investment advice.</p></div>
 </main>
 
 <main id="tab-history" hidden>
@@ -1727,6 +1843,414 @@ if (CHAIN) {
 }
 
 /* ================================================================
+   Strategy lab — multi-leg combos on the real chains
+   ================================================================ */
+const st = { tk: "NVDA", exp: null, strat: "butterfly", K: null, w: 2, n: 1, whatIf: null };
+const stExpSel = document.getElementById("stExp");
+const stCenterSel = document.getElementById("stCenter");
+const stWidthSel = document.getElementById("stWidth");
+const stWhatIf = document.getElementById("stWhatIf");
+
+/* Each strategy builds its legs from a strike-index accessor.
+   g.C(i, qty) / g.P(i, qty) = option at the i-th common strike (throws if missing);
+   g.S(shares) = a stock leg. qty is per combo: butterfly = +1 / −2 / +1. */
+const STRATEGIES = {
+  "butterfly": {
+    name: "Call butterfly", usesWidth: true,
+    build: (g, ci, w) => [g.C(ci - w, 1), g.C(ci, -2), g.C(ci + w, 1)],
+    why: "<p><b>The bet: the stock finishes near the middle strike.</b> Buy one call below, sell two" +
+      " at the middle, buy one above — equal spacing. The two short calls pay for most of the wings," +
+      " so a wide tent can cost pocket change, and that small debit is also the most you can lose." +
+      " Max profit = wing width − debit, earned only if the stock closes right at the middle" +
+      " strike.</p><p><b>Gamma lens:</b> this is the OPEX-pinning trade from the Guide. When dealers" +
+      " are long gamma around a heavy strike, their hedging drags price toward it — a butterfly" +
+      " centred there is a direct, cheap bet on the pin.</p>"
+  },
+  "iron-butterfly": {
+    name: "Iron butterfly", usesWidth: true,
+    build: (g, ci, w) => [g.P(ci - w, 1), g.P(ci, -1), g.C(ci, -1), g.C(ci + w, 1)],
+    why: "<p><b>The bet: get <i>paid</i> to call the pin.</b> Sell the at-the-money straddle, then" +
+      " buy a cheap wing on each side to cap the damage. You collect a net credit up front; close at" +
+      " the middle strike and you keep all of it, and the wings guarantee you can never lose more" +
+      " than width − credit.</p><p><b>Gamma lens:</b> same tent as the butterfly, opposite cash" +
+      " flow — compare the Net cost tile. Either way the position is short gamma near the middle:" +
+      " you are the volatility seller hoping dealer pinning does the work.</p>"
+  },
+  "iron-condor": {
+    name: "Iron condor", usesWidth: true,
+    build: (g, ci, w) => [g.P(ci - 2 * w, 1), g.P(ci - w, -1), g.C(ci + w, -1), g.C(ci + 2 * w, 1)],
+    why: "<p><b>The bet: the stock stays inside a band.</b> Sell an out-of-the-money put spread and" +
+      " an out-of-the-money call spread. You collect both credits; expire anywhere between the two" +
+      " short strikes and you keep everything, while the long wings cap the worst case. The classic" +
+      " “income from time decay” trade.</p><p><b>Gamma lens:</b> a condor seller is short" +
+      " gamma on both sides — the friend of the calm positive-GEX regime from §7, and the first" +
+      " casualty of a gamma squeeze. When people say “volatility sellers got run over”," +
+      " this is usually the position they mean.</p>"
+  },
+  "bull-call": {
+    name: "Bull call spread", usesWidth: true,
+    build: (g, ci, w) => [g.C(ci, 1), g.C(ci + w, -1)],
+    why: "<p><b>The bet: the stock rises — but pay less to make it.</b> Buy a call, sell a" +
+      " higher-strike call against it. The short leg refunds part of the premium; in exchange your" +
+      " profit is capped at the top strike. Max loss (the net debit) and max win are both known up" +
+      " front — compare the breakeven with a naked call in the Playground.</p><p><b>Gamma lens:</b>" +
+      " your two legs point opposite ways, so the dealer's net hedging burden is small. Spreads move" +
+      " markets far less than the one-sided call-buying wave of a gamma squeeze.</p>"
+  },
+  "bear-put": {
+    name: "Bear put spread", usesWidth: true,
+    build: (g, ci, w) => [g.P(ci, 1), g.P(ci - w, -1)],
+    why: "<p><b>The bet: the stock falls — without paying full price for puts.</b> Buy a put, sell a" +
+      " lower-strike put against it. The short leg makes the trade cheaper; in exchange gains stop" +
+      " at the lower strike. A defined-risk way to position for a drop (or hedge) when outright puts" +
+      " are expensive.</p><p><b>Gamma lens:</b> like its bullish twin, a spread is nearly" +
+      " hedging-neutral for dealers — one leg's gamma largely cancels the other's.</p>"
+  },
+  "straddle": {
+    name: "Long straddle", usesWidth: false,
+    build: (g, ci) => [g.C(ci, 1), g.P(ci, 1)],
+    why: "<p><b>The bet: a big move — direction unknown.</b> Buy the call <i>and</i> the put at the" +
+      " same strike. You profit if the stock moves further than the combined premium in either" +
+      " direction — earnings, rulings, launches. The enemy is a quiet market: two premiums melt with" +
+      " theta every day.</p><p><b>Gamma lens:</b> the purest long-gamma trade a customer can make —" +
+      " you own exactly what a short-gamma dealer fears. Check the Net gamma tile: big moves help" +
+      " you as mechanically as they hurt them.</p>"
+  },
+  "strangle": {
+    name: "Long strangle", usesWidth: true,
+    build: (g, ci, w) => [g.P(ci - w, 1), g.C(ci + w, 1)],
+    why: "<p><b>The bet: a really big move, on a budget.</b> Like the straddle, but the call and put" +
+      " are both out-of-the-money, so it costs far less — and needs an even larger move before it" +
+      " pays. Popular before binary events when you'd rather risk little and accept longer" +
+      " odds.</p><p><b>Gamma lens:</b> same long-gamma character as the straddle, spread over two" +
+      " strikes — the flat valley between them is where all the theta dies.</p>"
+  },
+  "covered-call": {
+    name: "Covered call", usesWidth: true,
+    build: (g, ci, w) => [g.S(100), g.C(ci + w, -1)],
+    why: "<p><b>The bet: the stock drifts sideways or gently up.</b> Own 100 shares, sell one call" +
+      " above the market. The premium is yours no matter what; in exchange you hand over any upside" +
+      " past the short strike. Stall = the premium is income; rocket = you still profit, just" +
+      " capped.</p><p><b>Gamma lens:</b> covered-call sellers are the “typical customer”" +
+      " the naive GEX model of §6 assumes. They supply the calls, dealers end up long them — which" +
+      " is why call gamma above the market usually counts as stabilizing.</p>"
+  },
+  "protective-put": {
+    name: "Protective put", usesWidth: true,
+    build: (g, ci, w) => [g.S(100), g.P(ci - w, 1)],
+    why: "<p><b>The bet: keep the upside, insure the downside.</b> Own 100 shares, buy a put below" +
+      " the market. It is an insurance policy — premium = the price, distance to the strike = the" +
+      " deductible. Losses stop at the put strike however far the stock falls; the cost is a quiet" +
+      " drag on returns in calm times.</p><p><b>Gamma lens:</b> the other half of §6's naive model:" +
+      " customers buy protective puts, so dealers sit short them — negative gamma below the market," +
+      " which is why sell-offs often accelerate once they reach put-heavy strikes.</p>"
+  }
+};
+
+function stMaps() {
+  const ch = CHAIN.tickers[st.tk].expiries[st.exp];
+  const cMap = new Map(ch.C.map(r => [r[0], r]));
+  const pMap = new Map(ch.P.map(r => [r[0], r]));
+  const Ks = ch.C.map(r => r[0]).filter(k => pMap.has(k));
+  return { Ks, cMap, pMap };
+}
+function stBuild(m, key, ci, w) {
+  const pick = (map, i, qty, kind) => {
+    if (i < 0 || i >= m.Ks.length) throw new RangeError("strike");
+    const r = map.get(m.Ks[i]);
+    if (!r || !(r[1] > 0)) throw new RangeError("quote");
+    return { kind, K: r[0], qty, mid: r[1], iv: r[2], delta: r[3] };
+  };
+  const g = {
+    C: (i, q) => pick(m.cMap, i, q, "C"),
+    P: (i, q) => pick(m.pMap, i, q, "P"),
+    S: q => ({ kind: "S", qty: q, mid: CHAIN.tickers[st.tk].spot })
+  };
+  try { return STRATEGIES[key].build(g, ci, w); } catch (e) { return null; }
+}
+function stFeasibleWidths(m, ci) {
+  const s = STRATEGIES[st.strat];
+  if (!s.usesWidth) return stBuild(m, st.strat, ci, 0) ? [0] : [];
+  const out = [];
+  for (let w = 1; w <= 8; w++) if (stBuild(m, st.strat, ci, w)) out.push(w);
+  return out;
+}
+
+function stFillExp() {
+  const exps = pgExpiries(st.tk);
+  if (!exps.includes(st.exp)) {
+    st.exp = exps.reduce((a, b) => Math.abs(pgDte(b) - 30) < Math.abs(pgDte(a) - 30) ? b : a, exps[0]);
+  }
+  stExpSel.textContent = "";
+  for (const e of exps) {
+    const o = document.createElement("option");
+    o.value = e;
+    o.textContent = new Date(e + "T12:00:00").toLocaleDateString("en-US",
+      { month: "short", day: "numeric", year: "numeric" }) + " · " + Math.round(pgDte(e)) + "d";
+    o.selected = e === st.exp;
+    stExpSel.appendChild(o);
+  }
+}
+/* Pick a centre strike (nearest previous choice / spot) that can actually host
+   the current strategy, then fill both selects. */
+function stFillCenterWidth() {
+  const m = stMaps();
+  const spot = CHAIN.tickers[st.tk].spot;
+  const target = st.K != null ? st.K : spot;
+  const order = m.Ks.map((k, i) => i)
+    .sort((a, b) => Math.abs(m.Ks[a] - target) - Math.abs(m.Ks[b] - target));
+  let ci = -1, widths = [];
+  for (const i of order) {
+    const ws = stFeasibleWidths(m, i);
+    if (ws.length) { ci = i; widths = ws; break; }
+  }
+  if (ci < 0) { st.K = null; return; }
+  st.K = m.Ks[ci];
+  if (!widths.includes(st.w)) {
+    st.w = widths.includes(2) ? 2 : widths[0];
+  }
+  const atmK = m.Ks.reduce((a, b) => Math.abs(b - spot) < Math.abs(a - spot) ? b : a, m.Ks[0]);
+  stCenterSel.textContent = "";
+  for (const k of m.Ks) {
+    const o = document.createElement("option");
+    o.value = k;
+    o.textContent = "$" + k + (k === atmK ? " · at the money" : "");
+    o.selected = k === st.K;
+    stCenterSel.appendChild(o);
+  }
+  stWidthSel.textContent = "";
+  stWidthSel.disabled = widths.length === 1 && widths[0] === 0;
+  if (stWidthSel.disabled) {
+    const o = document.createElement("option");
+    o.textContent = "— not used";
+    stWidthSel.appendChild(o);
+    return;
+  }
+  for (const w of widths) {
+    const legs = stBuild(m, st.strat, ci, w);
+    const ks = legs.filter(l => l.kind !== "S").map(l => l.K);
+    const lo = Math.min(...ks), hi = Math.max(...ks);
+    const o = document.createElement("option");
+    o.value = w;
+    o.textContent = "±" + w + " strike" + (w > 1 ? "s" : "") +
+      (lo === hi ? " ($" + lo + ")" : " ($" + lo + " – $" + hi + ")");
+    o.selected = w === st.w;
+    stWidthSel.appendChild(o);
+  }
+}
+function stSetTicker(tk) {
+  st.tk = tk; st.exp = null; st.K = null;
+  const spot = CHAIN.tickers[tk].spot;
+  stFillExp(); stFillCenterWidth();
+  stWhatIf.min = Math.round(spot * 0.65); stWhatIf.max = Math.round(spot * 1.35);
+  stWhatIf.step = spot > 500 ? 2 : spot > 150 ? 1 : 0.5;
+  st.whatIf = Math.round(spot);
+  stWhatIf.value = st.whatIf;
+}
+
+/* Where does the expiry P/L hit an extreme? English note for the tiles. */
+function stWhereNote(cands, target, top) {
+  const hit = cands.filter(c => Math.abs(c.v - target) < 1e-6).map(c => c.S);
+  const inner = hit.filter(S => S !== 0 && S !== top);
+  const hasLo = hit.includes(0), hasHi = hit.includes(top);
+  const f = S => "$" + (+S.toFixed(2)).toLocaleString("en-US");
+  if (hasLo && hasHi) {
+    return inner.length ? "if it closes at or beyond " + f(Math.min(...inner)) + " / " + f(Math.max(...inner))
+                        : "far from here, either way";
+  }
+  if (hasHi) return "if it closes at or above " + f(inner.length ? Math.min(...inner) : top);
+  if (hasLo) return inner.length ? "if it closes at or below " + f(Math.max(...inner)) : "if the stock goes to $0";
+  if (hit.length > 1) return "if it closes between " + f(Math.min(...hit)) + " and " + f(Math.max(...hit));
+  return "if it closes at " + f(hit[0]);
+}
+
+function renderStrategies() {
+  const T = tokens();
+  const status = document.getElementById("stStatus");
+  if (!CHAIN) { status.textContent = "data.js not found — run refresh_data.py to fetch real chains."; return; }
+  const spot = CHAIN.tickers[st.tk].spot;
+  const strat = STRATEGIES[st.strat];
+  const m = stMaps();
+  const ci = m.Ks.indexOf(st.K);
+  const legs = ci < 0 ? null : stBuild(m, st.strat, ci, strat.usesWidth ? st.w : 0);
+  document.getElementById("stWhyKicker").textContent = strat.name + " — why & when";
+  document.getElementById("stWhy").innerHTML = strat.why;
+  if (!legs) {
+    status.textContent = "Not enough listed strikes around here — pick another centre strike or expiry.";
+    return;
+  }
+  const dte = pgDte(st.exp), Tyr = dte / 365;
+  const ageDays = Math.round((Date.now() - new Date(CHAIN.asof + "T12:00:00")) / 86400e3);
+  status.textContent = strat.name + " on " + st.tk + " · price $" + spot.toFixed(2) +
+    " · real Cboe delayed quotes, snapshot " + CHAIN.asof +
+    (ageDays > 5 ? " (" + ageDays + " days old — run refresh_data.py)" : "");
+
+  /* leg chips */
+  const chips = document.getElementById("stLegs");
+  chips.textContent = "";
+  const legsSorted = [...legs].sort((a, b) => (a.kind === "S" ? -1 : b.kind === "S" ? 1 : a.K - b.K));
+  for (const l of legsSorted) {
+    const c = document.createElement("span");
+    c.className = "legchip " + (l.qty > 0 ? "buy" : "sell");
+    const b = document.createElement("b");
+    if (l.kind === "S") {
+      b.textContent = "Own " + l.qty + " shares";
+      c.append(b, " · $" + l.mid.toFixed(2));
+    } else {
+      b.textContent = (l.qty > 0 ? "Buy " : "Sell ") + Math.abs(l.qty) + " × $" + l.K +
+        " " + (l.kind === "C" ? "call" : "put");
+      c.append(b, " · mid $" + l.mid.toFixed(2));
+    }
+    chips.appendChild(c);
+  }
+
+  /* per-combo cost & P/L functions (× st.n for totals) */
+  const cost = legs.reduce((a, l) => a + (l.kind === "S" ? l.qty * l.mid : l.qty * 100 * l.mid), 0);
+  const valueExp = S => legs.reduce((a, l) => a + (
+    l.kind === "S" ? l.qty * S :
+    l.kind === "C" ? l.qty * 100 * Math.max(S - l.K, 0) :
+                     l.qty * 100 * Math.max(l.K - S, 0)), 0);
+  const valueNow = S => legs.reduce((a, l) => {
+    if (l.kind === "S") return a + l.qty * S;
+    const v = bs(S, l.K, Tyr, l.iv);
+    return a + l.qty * 100 * (l.kind === "C" ? v.call : v.put);
+  }, 0);
+  const plExp = S => (valueExp(S) - cost) * st.n;
+  const plNow = S => (valueNow(S) - cost) * st.n;
+
+  /* expiry P/L is piecewise linear: extremes live at $0, the strikes, or the far ends */
+  const optKs = [...new Set(legs.filter(l => l.kind !== "S").map(l => l.K))].sort((a, b) => a - b);
+  const top = Math.round(spot * 3);
+  const candS = [0, ...optKs, top];
+  const cands = candS.map(S => ({ S, v: plExp(S) }));
+  const upSlope = plExp(top + 1) - plExp(top);
+  const vMax = Math.max(...cands.map(c => c.v)), vMin = Math.min(...cands.map(c => c.v));
+
+  /* tiles */
+  const costTotal = cost * st.n;
+  document.getElementById("stCost").textContent = fmtCompact$(Math.abs(costTotal));
+  document.getElementById("stCostNote").textContent = (costTotal >= 0
+    ? "net debit — you pay this up front"
+    : "net credit — you collect this up front") +
+    (st.n > 1 ? " (" + st.n + " combos)" : "");
+
+  const bes = [];
+  for (let i = 1; i < cands.length; i++) {
+    const a = cands[i - 1], b = cands[i];
+    if ((a.v < 0 && b.v > 0) || (a.v > 0 && b.v < 0)) {
+      bes.push(a.S + (0 - a.v) / (b.v - a.v) * (b.S - a.S));
+    } else if (b.v === 0 && a.v !== 0) bes.push(b.S);
+  }
+  document.getElementById("stBE").textContent =
+    bes.length ? bes.map(b2 => "$" + b2.toFixed(2)).join(" / ") : "—";
+  document.getElementById("stBENote").textContent =
+    bes.length === 2 ? "profit " + (plExp((bes[0] + bes[1]) / 2) > 0 ? "between them" : "outside them") :
+    bes.length ? "where the expiry P/L crosses zero" : "never crosses zero before expiry";
+
+  const maxWinEl = document.getElementById("stMaxWin");
+  if (upSlope > 1e-9) {
+    maxWinEl.textContent = "Unlimited";
+    document.getElementById("stMaxWinNote").textContent = "no ceiling on a big enough rally";
+  } else {
+    maxWinEl.textContent = fmtCompact$(vMax);
+    document.getElementById("stMaxWinNote").textContent = stWhereNote(cands, vMax, top);
+  }
+  const maxLossEl = document.getElementById("stMaxLoss");
+  const lossUnbounded = upSlope < -1e-9;
+  if (lossUnbounded) {
+    maxLossEl.textContent = "Unlimited";
+    document.getElementById("stMaxLossNote").textContent = "no floor on a big enough rally";
+  } else {
+    maxLossEl.textContent = fmtCompact$(Math.abs(Math.min(vMin, 0)));
+    document.getElementById("stMaxLossNote").textContent =
+      vMin >= 0 ? "cannot lose at expiry" : stWhereNote(cands, vMin, top);
+  }
+
+  const shares = legs.reduce((a, l) => a + (l.kind === "S" ? l.qty : l.qty * 100 * l.delta), 0) * st.n;
+  document.getElementById("stShares").textContent =
+    (shares >= 0 ? "+" : "−") + fmtInt(Math.abs(shares));
+  let netGamma = 0, grossGamma = 0;
+  for (const l of legs) {
+    if (l.kind === "S") continue;
+    const g = l.qty * 100 * bs(spot, l.K, Tyr, l.iv).gamma;
+    netGamma += g; grossGamma += Math.abs(g);
+  }
+  netGamma *= st.n; grossGamma *= st.n;
+  document.getElementById("stGamma").textContent =
+    (netGamma >= 0 ? "+" : "−") + Math.abs(netGamma).toFixed(1);
+  /* legs cancelling ≥ ~97% of each other's gamma counts as neutral (a 30-day
+     butterfly really is: the tent only turns short-gamma as expiry nears) */
+  document.getElementById("stGammaNote").textContent =
+    Math.abs(netGamma) < grossGamma * 0.03
+    ? "shares per $1 move · roughly gamma-neutral for now"
+    : "shares per $1 move · " + (netGamma > 0
+      ? "long gamma — big moves help you"
+      : "short gamma — you want it quiet and pinned");
+
+  /* what-if tiles */
+  const wi = +st.whatIf;
+  document.getElementById("stWhatIfOut").textContent = "$" + wi.toFixed(2).replace(/\.00$/, "") +
+    " (" + ((wi - spot) / spot * 100 >= 0 ? "+" : "−") + Math.abs((wi - spot) / spot * 100).toFixed(1) + "%)";
+  const plN = plNow(wi), plE = plExp(wi);
+  const setPL = (id, text, v) => {
+    const e = document.getElementById(id);
+    e.textContent = text;
+    e.classList.toggle("pos", v > 0);
+    e.classList.toggle("neg", v < 0);
+  };
+  setPL("stPLNow", fmtPL(plN), plN);
+  setPL("stPLExp", fmtPL(plE), plE);
+  document.getElementById("stPLExpNote").textContent = "in " + Math.round(dte) + " days, if it closes at $" + wi;
+  const risk = lossUnbounded || vMin >= 0 ? Math.max(Math.abs(costTotal), 1) : Math.abs(vMin) * st.n;
+  setPL("stRet", (plE >= 0 ? "+" : "−") + Math.abs(plE / risk * 100).toFixed(0) + "%", plE);
+  document.getElementById("stRetNote").textContent = lossUnbounded || vMin >= 0
+    ? "at expiry, on the premium" : "at expiry, on the max you can lose";
+
+  /* chart */
+  const xs = []; const lo = spot * 0.65, hi = spot * 1.35;
+  for (let i = 0; i <= 240; i++) xs.push(lo + (hi - lo) * i / 240);
+  const nowVals = xs.map(plNow), expVals = xs.map(plExp);
+  let yMin = Math.min(...nowVals, ...expVals), yMax = Math.max(...nowVals, ...expVals);
+  const pad = (yMax - yMin) * 0.08 || 100;
+  yMin = Math.min(yMin - pad, -pad); yMax = Math.max(yMax + pad, pad);
+  const ann = optKs.map(K => ({ type: "vline", x: K, label: "$" + K }));
+  ann.push({ type: "vline", x: spot, label: "now $" + spot.toFixed(0), labelPos: "bottom" });
+  for (const b2 of bes) {
+    if (b2 > lo && b2 < hi) ann.push({ type: "point", x: b2, y: 0, color: T.s2 });
+  }
+  ann.push({ type: "point", x: wi, y: plN, color: T.s1 });
+  ann.push({ type: "point", x: wi, y: plE, color: T.s2 });
+  renderLineChart(document.getElementById("stChart"), {
+    height: 330, xDomain: [lo, hi], yDomain: [yMin, yMax], xs,
+    series: [
+      { name: "If it jumps there today", color: T.s1, values: nowVals },
+      { name: "At expiry (" + Math.round(dte) + "d)", color: T.s2, values: expVals }
+    ],
+    plFill: 1,
+    fmtX: v => "$" + Math.round(v), ttFmtX: v => "stock at $" + v.toFixed(2),
+    fmtY: fmtCompact$, ttFmtY: fmtPL, zeroLine: true,
+    xLabel: "Stock price", yLabel: "Total profit / loss ($)",
+    ariaLabel: "Profit and loss versus stock price for the selected strategy",
+    annotations: ann
+  });
+}
+
+if (CHAIN) {
+  segWire("stTicker", "tk", st, () => { stSetTicker(st.tk); renderStrategies(); });
+  document.getElementById("stStrat").addEventListener("change", e => {
+    st.strat = e.target.value; stFillCenterWidth(); renderStrategies();
+  });
+  stExpSel.addEventListener("change", () => { st.exp = stExpSel.value; stFillCenterWidth(); renderStrategies(); });
+  stCenterSel.addEventListener("change", () => { st.K = +stCenterSel.value; stFillCenterWidth(); renderStrategies(); });
+  stWidthSel.addEventListener("change", () => { st.w = +stWidthSel.value; renderStrategies(); });
+  document.getElementById("stN").addEventListener("input", e => {
+    st.n = Math.max(1, Math.min(1000, Math.round(+e.target.value || 1))); renderStrategies();
+  });
+  stWhatIf.addEventListener("input", e => { st.whatIf = +e.target.value; renderStrategies(); });
+  stSetTicker("NVDA");
+}
+
+/* ================================================================
    Time machine — real historical scenarios (from hist.js)
    ================================================================ */
 const HIST = typeof HIST_DATA !== "undefined" ? HIST_DATA : null;
@@ -1972,10 +2496,11 @@ if (HIST) {
 const tabEls = {
   guide: document.getElementById("tab-guide"),
   playground: document.getElementById("tab-playground"),
+  strategies: document.getElementById("tab-strategies"),
   history: document.getElementById("tab-history")
 };
 const tabBar = document.getElementById("tabBar");
-const HASH2TAB = { "#playground": "playground", "#history": "history" };
+const HASH2TAB = { "#playground": "playground", "#strategies": "strategies", "#history": "history" };
 function currentTab() {
   for (const k in tabEls) if (!tabEls[k].hidden) return k;
   return "guide";
@@ -2002,6 +2527,7 @@ function renderAll() {
     renderHedge(); renderGex(); renderSim();
   }
   if (!tabEls.playground.hidden) renderPlayground();
+  if (!tabEls.strategies.hidden && CHAIN) renderStrategies();
   if (!tabEls.history.hidden && HIST) renderTimeMachine();
 }
 let resizeTimer = null;
